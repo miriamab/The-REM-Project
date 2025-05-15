@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
+// vor dem 1. mal Packete installieren: "npm install"
+// Spiel starten: "npm run dev"
+// zum starten "http://localhost:5181/test_room.html" in Browser kopieren (Zahl anpassen!)
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
 
@@ -29,14 +33,14 @@ floor.rotation.x = Math.PI / 2;
 scene.add(floor);
 
 // Wände (einfacher Raum)
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x333388, side: THREE.BackSide });
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.BackSide });
 const room = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 20), wallMat);
 room.position.y = 5; // Damit Boden nicht blockiert
 scene.add(room);
 
 // Orientierungshilfe: Box
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-const boxMat = new THREE.MeshStandardMaterial({ color: 0xff5555 });
+const boxMat = new THREE.MeshStandardMaterial({ color: 0xfcfcfc });
 const box = new THREE.Mesh(boxGeo, boxMat);
 box.position.set(2, 0.5, 0);
 scene.add(box);
