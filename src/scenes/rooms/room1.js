@@ -12,9 +12,10 @@ export function setupRoom1(scene) {
 
     // TextureLoader
     const textureLoader = new THREE.TextureLoader();
-    const wallTexture = textureLoader.load('images/wall1.png'); // Für die Wände
-    const floorTexture = textureLoader.load('images/floor2.png'); // Für den Boden
-    const ceilingTexture = textureLoader.load('images/floor1.jpg'); // Für die Decke
+    const wallTexture = textureLoader.load('assets/images/wall1.png'); // Für die Wände
+    const floorTexture = textureLoader.load('assets/images/floor1.jpg'); // Für den Boden
+    const ceilingTexture = textureLoader.load('assets/images/floor1.jpg'); // Für die Decke
+    const loader = new GLTFLoader();
 
     // Licht
     const ambientLight = new THREE.AmbientLight(lightColor, 0.4);
@@ -43,7 +44,7 @@ export function setupRoom1(scene) {
     const ceilingMat = new THREE.MeshStandardMaterial({ map: ceilingTexture, side: THREE.DoubleSide }); // DoubleSide, falls man hochschaut und die Rückseite sieht
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
     ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = 9.98; // Auf Höhe der Raumdecke
+    ceiling.position.y = 9; // Auf Höhe der Raumdecke
     scene.add(ceiling);
 
     // Interaktive Box
@@ -54,18 +55,26 @@ export function setupRoom1(scene) {
     scene.add(box);
 
     // Kommode
-    const loader = new GLTFLoader();
     loader.load(
-        'src/objects/models/wardrobe/kids_dresser_chest_of_drawers.glb', // PASSE DEN PFAD AN!
+        'src/objects/models/wardrobe/kids_dresser_chest_of_drawers.glb', // Pfad
         function (gltf) {
         const wardrobe = gltf.scene;
-        wardrobe.scale.set(2.5, 2.5, 2.5); // Passe die Größe an, Modelle sind oft sehr groß oder klein
-        wardrobe.position.set(0, 1.1, -9); // Positioniere die Kommode im Raum (z.B. an der Wand)
+        wardrobe.scale.set(2.5, 2.5, 2.5); // Größe anpassen
+        wardrobe.position.set(0, 1.2, -9.2); // Position
         scene.add(wardrobe);
     }
     );
 
-
+    // Bed
+    loader.load(
+        'src/objects/models/bed/old_bed.glb', // Pfad
+        function (gltf) {
+        const bed = gltf.scene;
+        bed.scale.set(4, 4, 4); // Größe anpassen
+        bed.position.set(7, 0.1, -5); // Position
+        scene.add(bed);
+        }
+    );
 
     registerInteractive(box, () => {
     box.material.color.set(0xf352f0); // Neue Farbe
