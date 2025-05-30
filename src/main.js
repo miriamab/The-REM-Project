@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { addPlaceholderHands } from './objects/hands.js';
 import { registerInteractive, setupRayInteraction } from './interactions/useRayInteraction.js';
 import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
-import { setupTestRoom } from './scenes/rooms/test_room.js';
+// import { setupTestRoom } from './scenes/rooms/test_room.js';
+import { setupRoom1 } from './scenes/rooms/room1.js'; //aktueller Raum
 
 // --- Grundsetup ---
 const scene = new THREE.Scene();
@@ -19,7 +20,7 @@ scene.add(camera);
 
 
 // --- Setup-Module aufrufen ---
-setupTestRoom(scene);                      // Test-Raum wird aufgebaut
+setupRoom1(scene);                      // Test-Raum wird aufgebaut
 addPlaceholderHands(camera);              // Hände an Kamera
 setupRayInteraction(camera);              // Raycasting vorbereiten
 const { controls, update } = setupFirstPersonControls(camera, renderer); // Bewegung
