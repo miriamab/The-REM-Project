@@ -5,6 +5,7 @@ import { addRealHands } from './objects/hands.js';
 import { registerInteractive, setupRayInteraction } from './interactions/useRayInteraction.js';
 import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
 // import { setupTestRoom } from './scenes/rooms/test_room.js';
+import { setupTestRoom } from './scenes/rooms/test_room.js';
 import { setupRoom1 } from './scenes/rooms/room1.js'; //aktueller Raum
 
 // --- Grundsetup ---
