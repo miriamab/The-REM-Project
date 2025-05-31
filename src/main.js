@@ -3,8 +3,7 @@ import * as THREE from 'three';
 import { addPlaceholderHands } from './objects/hands.js';
 import { registerInteractive, setupRayInteraction } from './interactions/useRayInteraction.js';
 import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
-// import { setupTestRoom } from './scenes/rooms/test_room.js';
-import { setupRoom1 } from './scenes/rooms/room1.js'; //aktueller Raum
+import { Room1 } from './scenes/rooms/Room1.js'; // Refactored Raum 1 als Klasse
 
 // --- Grundsetup ---
 const scene = new THREE.Scene();
@@ -16,14 +15,18 @@ camera.position.set(0, 1.6, 5);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
+// --- Raum vorbereiten ---
+const room = new Room1(scene); // Szene übergeben
+room.init();                   // Raum aufbauen
+
+// --- Restliches Setup ---
+addPlaceholderHands(camera);
+setupRayInteraction(camera);
+const { controls, update } = setupFirstPersonControls(camera, renderer);
+
+// --- Kamera zur Szene hinzufügen ---
 scene.add(camera);
-
-
-// --- Setup-Module aufrufen ---
-setupRoom1(scene);                      // Test-Raum wird aufgebaut
-addPlaceholderHands(camera);              // Hände an Kamera
-setupRayInteraction(camera);              // Raycasting vorbereiten
-const { controls, update } = setupFirstPersonControls(camera, renderer); // Bewegung
 
 // --- Animation Loop ---
 function animate() {
