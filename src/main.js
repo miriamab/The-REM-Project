@@ -1,9 +1,11 @@
 // main.js
 import * as THREE from 'three';
-import { addPlaceholderHands } from './objects/hands.js';
+//import { addPlaceholderHands } from './objects/hands.js';
+import { addRealHands } from './objects/hands.js';
 import { registerInteractive, setupRayInteraction } from './interactions/useRayInteraction.js';
 import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
 // import { setupTestRoom } from './scenes/rooms/test_room.js';
+import { setupTestRoom } from './scenes/rooms/test_room.js';
 import { setupRoom1 } from './scenes/rooms/room1.js'; //aktueller Raum
 
 // --- Grundsetup ---
@@ -20,8 +22,9 @@ scene.add(camera);
 
 
 // --- Setup-Module aufrufen ---
-setupRoom1(scene);                      // Test-Raum wird aufgebaut
-addPlaceholderHands(camera);              // Hände an Kamera
+setupTestRoom(scene);                      // Test-Raum wird aufgebaut
+//addPlaceholderHands(camera);              // Hände an Kamera
+addRealHands(camera);
 setupRayInteraction(camera);              // Raycasting vorbereiten
 const { controls, update } = setupFirstPersonControls(camera, renderer); // Bewegung
 
