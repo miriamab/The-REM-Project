@@ -69,18 +69,6 @@ export class Room1 extends BaseRoom {
     });
     this.add(box);
 
-      /**
-   * Diese Methode wird aufgerufen siehe unten, wenn der Raum erfolgreich abgeschlossen wurde.
-   * Hier könnte z. B. eine Tür geöffnet oder ein Rätsel beendet worden sein.
-   * 
-   * 👉 Hier Cutscene + Wechsel zu Raum2 auslösen, z. B.:
-   * playCutsceneAndSwitch('/cutscenes/room1_outro.mp4', () => {
-   *   switchRoom(Room2, this.scene);
-   * });
-   */
-  onSolved() {
-    console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
-  }
 
     // Kommode
     loader.load('src/objects/models/wardrobe/kids_dresser_chest_of_drawers.glb', (gltf) => {
@@ -99,5 +87,17 @@ export class Room1 extends BaseRoom {
     });
 
     scene.add(this);
+  }
+        /**
+   * Diese Methode wird aufgerufen siehe unten, wenn der Raum erfolgreich abgeschlossen wurde.
+   * Hier könnte z. B. eine Tür geöffnet oder ein Rätsel beendet worden sein.
+   * 
+   * 👉 Hier Cutscene + Wechsel zu Raum2 auslösen, z. B.:
+   * playCutsceneAndSwitch('/cutscenes/room1_outro.mp4', () => {
+   *   switchRoom(Room2, this.scene);
+   * });
+   */
+  onSolved() {
+    console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
   }
 }
