@@ -1,6 +1,6 @@
 // main.js
 import * as THREE from 'three';
-import { addPlaceholderHands } from './objects/hands.js';
+import { addRealHands } from './objects/hands.js';
 import { registerInteractive, setupRayInteraction } from './interactions/useRayInteraction.js';
 import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
 import { Room1 } from './scenes/rooms/Room1.js'; // Refactored Raum 1 als Klasse
@@ -21,7 +21,7 @@ const room = new Room1(scene); // Szene übergeben
 room.init();                   // Raum aufbauen
 
 // --- Restliches Setup ---
-addPlaceholderHands(camera);
+addRealHands(camera);
 setupRayInteraction(camera);
 const { controls, update } = setupFirstPersonControls(camera, renderer);
 
