@@ -1,6 +1,6 @@
 // main.js
 import * as THREE from 'three';
-import { addPlaceholderHands } from './objects/hands.js';
+import { addRealHands } from './objects/hands.js';
 import { setupRayInteraction } from './interactions/useRayInteraction.js';
 import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
 
@@ -19,8 +19,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// --- Setup ---
-addPlaceholderHands(camera);
+// --- Restliches Setup ---
+addRealHands(camera);
 setupRayInteraction(camera);
 const { controls, update } = setupFirstPersonControls(camera, renderer);
 
