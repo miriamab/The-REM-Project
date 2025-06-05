@@ -11,6 +11,10 @@ import { switchRoom, playCutsceneAndSwitch } from './sceneManager.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
+
+const SKIP_CUTSCENE = true; 
+let currentRoom = null;
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.6, 5);
 scene.add(camera);
@@ -29,10 +33,19 @@ function animate() {
   requestAnimationFrame(animate);
   update();
   renderer.render(scene, camera);
+
+
+  if (currentRoom && typeof currentRoom.animateBlubberblasen === 'function') {
+  currentRoom.animateBlubberblasen();
+}
 }
 animate();
 
 // --- Starte mit Cutscene, dann Raum ---
-playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
-  switchRoom(Room1, scene);
-});
+if (SKIP_CUTSCENE) {
+  currentRoom = switchRoom(Room1, scene);
+} else {
+  playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
+    currentRoom = switchRoom(Room1, scene);
+  });
+}
