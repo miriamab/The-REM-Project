@@ -6,6 +6,7 @@ import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
 
 import { Room1 } from './scenes/rooms/Room1.js';
 import { switchRoom, playCutsceneAndSwitch } from './sceneManager.js';
+import { createBlubberblasen } from './objects/blubberblasen.js';
 
 // --- Grundsetup ---
 const scene = new THREE.Scene();
@@ -28,16 +29,29 @@ addRealHands(camera);
 setupRayInteraction(camera);
 const { controls, update } = setupFirstPersonControls(camera, renderer);
 
+//Bubbles
+const bubbles = createBlubberblasen(scene);
+
 // --- Animation Loop ---
 function animate() {
   requestAnimationFrame(animate);
   update();
   renderer.render(scene, camera);
 
+  const timer = 0.0001 * Date.now();
 
-  if (currentRoom && typeof currentRoom.animateBlubberblasen === 'function') {
-  currentRoom.animateBlubberblasen();
-}
+				for ( let i = 0, il = bubbles.length; i < il; i ++ ) {
+
+					const sphere = bubbles[ i ];
+
+					sphere.position.x = 5 * Math.cos( timer + i );
+					sphere.position.y = 5 * Math.sin( timer + i * 1.1 );
+
+				}
+
+				//effect.render( scene, camera );
+
+  
 }
 animate();
 

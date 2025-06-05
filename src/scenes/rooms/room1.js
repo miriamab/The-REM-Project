@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { registerInteractive } from '../../interactions/useRayInteraction.js';
 import { BaseRoom } from './BaseRoom.js';
-import { createBlubberblasen } from '../../objects/blubberblasen.js';
+
 
 export class Room1 extends BaseRoom {
   constructor(scene) {
@@ -91,8 +91,7 @@ export class Room1 extends BaseRoom {
   
 
 
-  // Blubberblasen erzeugen und Animationsfunktion speichern
-  this.animateBlubberblasen = createBlubberblasen(this.scene);
+  
 
 
   }

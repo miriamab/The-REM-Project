@@ -15,12 +15,12 @@ export function createBlubberblasen(scene) {
   const geometry = new THREE.SphereGeometry(0.1, 32, 16);
 
     const envMap = new THREE.CubeTextureLoader().load([
-    'assets/images/px.png',
-    'assets/images/nx.png',
-    'assets/images/py.png',
-    'assets/images/ny.png',
-    'assets/images/pz.png',
-    'assets/images/nz.png'
+    'assets/images/silber.png',
+    'assets/images/silber.png',
+    'assets/images/silber.png',
+    'assets/images/silber.png',
+    'assets/images/silber.png',
+    'assets/images/silber.png'
   ]);
   scene.background = envMap;
 
