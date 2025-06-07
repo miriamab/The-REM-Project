@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { registerInteractive } from '../../interactions/useRayInteraction.js';
 import { BaseRoom } from './BaseRoom.js';
+import { createBlubberblasen } from '../../objects/blubberblasen.js';
+import { spawnBubbleEffect } from '../../objects/blubberblasen.js';
 
 
 export class Room1 extends BaseRoom {
@@ -32,6 +34,9 @@ export class Room1 extends BaseRoom {
     this.add(ambientLight);
     this.add(dirLight);
 
+    this.ambientLight = ambientLight;
+    this.dirLight = dirLight;   
+
     // Boden
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(20, 20),
@@ -58,19 +63,6 @@ export class Room1 extends BaseRoom {
     ceiling.position.y = 9;
     this.add(ceiling);
 
-    // Interaktive Box
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: objectColor })
-    );
-    box.position.set(2, 0.5, 0);
-    registerInteractive(box, () => {
-      box.material.color.set(0xf352f0);
-      console.log("✅ Box getroffen und geändert");
-    });
-    this.add(box);
-
-
     // Kommode
     loader.load('src/objects/models/wardrobe/kids_dresser_chest_of_drawers.glb', (gltf) => {
       const wardrobe = gltf.scene;
@@ -87,12 +79,28 @@ export class Room1 extends BaseRoom {
       this.add(bed);
     });
 
-    // Blubberblasen
-  
+    // Blubberblasen Rätsel
+    
 
+  const blubber = createBlubberblasen(this.scene);
+  this.animateBlubberblasen = blubber.animate;
+  this.bubbles = blubber.bubbleArray;
 
-  
+  this.bubbles.forEach(bubble => {
+  registerInteractive(bubble, () => {
+    this.scene.remove(bubble);
+    const idx = this.bubbles.indexOf(bubble);
+    if (idx > -1) this.bubbles.splice(idx, 1);
 
+    // Effekt anzeigen
+    spawnBubbleEffect(this.scene, bubble.position);
+
+    // Wenn keine Blasen mehr da sind: Nebel und Licht!
+    if (this.bubbles.length === 0) {
+      this.triggerOrangeFogAndLight();
+    }
+    });
+});
 
   }
         /**
@@ -107,4 +115,54 @@ export class Room1 extends BaseRoom {
   onSolved() {
     console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
   }
+
+  // funktion wenn alle blubberblasen angeklickt wurden
+  triggerOrangeFogAndLight() {
+    // Zielwerte
+    const fogColor = 0xd48f11;
+    const maxDensity = 0.2; // Weniger dicht für mehr Durchsichtigkeit
+    const fadeInTime = 2000; // ms
+    const holdTime = 4000;   // ms
+    const fadeOutTime = 2500; // ms
+
+    // Nebel initialisieren
+    this.scene.fog = new THREE.FogExp2(fogColor, 1, 12);
+
+    // Fade-In
+  let start = null;
+  const fadeIn = (timestamp) => {
+    if (!start) start = timestamp;
+    const elapsed = timestamp - start;
+    const t = Math.min(elapsed / fadeInTime, 1);
+    this.scene.fog.density = t * maxDensity;
+    if (t < 1) {
+      requestAnimationFrame(fadeIn);
+    } else {
+      // Lichter orange färben
+      if (this.ambientLight) this.ambientLight.color.set(0xffa500);
+      if (this.dirLight) this.dirLight.color.set(0xffa500);
+      // Halte den Nebel für eine Weile
+      setTimeout(() => {
+        // Fade-Out starten
+        start = null;
+        requestAnimationFrame(fadeOut);
+      }, holdTime);
+    }
+  };
+
+  // Fade-Out
+  const fadeOut = (timestamp) => {
+    if (!start) start = timestamp;
+    const elapsed = timestamp - start;
+    const t = Math.min(elapsed / fadeOutTime, 1);
+    this.scene.fog.density = (1 - t) * maxDensity;
+    if (t < 1) {
+      requestAnimationFrame(fadeOut);
+    } else {
+      this.scene.fog = null;
+    }
+  };
+
+  requestAnimationFrame(fadeIn);
+}
 }
