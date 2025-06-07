@@ -30,12 +30,12 @@ export function createBlubberblasen(scene) {
   });
 
   // Erstelle viele Blasen
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 10; i++) {
     const mesh = new THREE.Mesh(geometry, material.clone());
     // x: -9 bis 9, y: 0.5 bis 9.5, z: -9 bis 9 (etwas Abstand zu den Wänden/Boden/Decke)
     mesh.position.x = Math.random() * 18 - 9;
     mesh.position.y = 5;
-    mesh.position.z = Math.random() * 18 - 9;
+    mesh.position.z = 1 + Math.random() * 1;
     mesh.scale.setScalar(Math.random() * 2 + 0.5);
     scene.add(mesh)
     bubbleArray.push(mesh)
@@ -45,8 +45,9 @@ export function createBlubberblasen(scene) {
     const timer = 0.0001 * Date.now();
     for (let i = 0, il = bubbleArray.length; i < il; i++) {
       const sphere = bubbleArray[i];
+      if (sphere.userData.removed) continue;
       sphere.position.x = 0 + 4 * Math.cos(timer + i);
-      sphere.position.y = 5 + 2 * Math.sin(timer + i * 1.2);
+      sphere.position.y = 3 + 2 * Math.sin(timer + i * 1.2);
       sphere.position.z = 0 + 4 * Math.sin(timer + i * 0.9)
     }
   };
@@ -57,7 +58,7 @@ export function createBlubberblasen(scene) {
 export function spawnBubbleEffect(scene, position) {
   const particles = [];
   const geometry = new THREE.SphereGeometry(0.05, 8, 8);
-  const material = new THREE.MeshBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.8 });
+  const material = new THREE.MeshBasicMaterial({ color: 0xffa500, transparent: true, opacity: 0.8 });
 
   for (let i = 0; i < 12; i++) {
     const particle = new THREE.Mesh(geometry, material.clone());

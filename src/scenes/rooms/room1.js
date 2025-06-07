@@ -87,16 +87,15 @@ export class Room1 extends BaseRoom {
   this.bubbles = blubber.bubbleArray;
 
   this.bubbles.forEach(bubble => {
-  registerInteractive(bubble, () => {
-    this.scene.remove(bubble);
-    const idx = this.bubbles.indexOf(bubble);
-    if (idx > -1) this.bubbles.splice(idx, 1);
+  registerInteractive(bubble, (hit) => {
+    this.scene.remove(hit);
+    hit.userData.removed = true;
 
     // Effekt anzeigen
-    spawnBubbleEffect(this.scene, bubble.position);
+    spawnBubbleEffect(this.scene, hit.position);
 
     // Wenn keine Blasen mehr da sind: Nebel und Licht!
-    if (this.bubbles.length === 0) {
+    if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
       this.triggerOrangeFogAndLight();
     }
     });
@@ -128,6 +127,11 @@ export class Room1 extends BaseRoom {
     // Nebel initialisieren
     this.scene.fog = new THREE.FogExp2(fogColor, 1, 12);
 
+    // Ursprungsfarben merken
+    const origAmbient = this.ambientLight ? this.ambientLight.color.clone() : null;
+    const origDir = this.dirLight ? this.dirLight.color.clone() : null;
+    const targetColor = new THREE.Color(0xffa500);
+
     // Fade-In
   let start = null;
   const fadeIn = (timestamp) => {
@@ -135,12 +139,18 @@ export class Room1 extends BaseRoom {
     const elapsed = timestamp - start;
     const t = Math.min(elapsed / fadeInTime, 1);
     this.scene.fog.density = t * maxDensity;
+
+    // Lichtfarbe sanft interpolieren
+    if (this.ambientLight && origAmbient) {
+      this.ambientLight.color.lerpColors(origAmbient, targetColor, t);
+    }
+    if (this.dirLight && origDir) {
+      this.dirLight.color.lerpColors(origDir, targetColor, t);
+    }
+
     if (t < 1) {
       requestAnimationFrame(fadeIn);
     } else {
-      // Lichter orange färben
-      if (this.ambientLight) this.ambientLight.color.set(0xffa500);
-      if (this.dirLight) this.dirLight.color.set(0xffa500);
       // Halte den Nebel für eine Weile
       setTimeout(() => {
         // Fade-Out starten
