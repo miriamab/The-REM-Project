@@ -89,4 +89,3 @@ export function spawnBubbleEffect(scene, position) {
   }
   animateParticles(0);
 }
-

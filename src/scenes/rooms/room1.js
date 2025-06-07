@@ -79,9 +79,19 @@ export class Room1 extends BaseRoom {
       this.add(bed);
     });
 
-    // Blubberblasen Rätsel
-    
+    // Teddy Bär
+    loader.load('src/objects/models/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
+      const teddy = gltf.scene;
+      teddy.scale.set(30, 30, 30);
+      teddy.position.set(-8, -0.9, 0);
+      teddy.rotation.y = Math.PI;
+      this.add(teddy);
 
+      // Starte die Blutfontäne dauerhaft
+      this.startBloodFountain(this.scene, teddy.position);
+    });
+
+    // Blubberblasen Rätsel
   const blubber = createBlubberblasen(this.scene);
   this.animateBlubberblasen = blubber.animate;
   this.bubbles = blubber.bubbleArray;
@@ -114,8 +124,8 @@ export class Room1 extends BaseRoom {
   onSolved() {
     console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
   }
-
-  // funktion wenn alle blubberblasen angeklickt wurden
+  // _________________
+  // FUNKTION WENN ALLE BLUBBERBLASEN ANGEKLICKT WURDEN
   triggerOrangeFogAndLight() {
     // Zielwerte
     const fogColor = 0xd48f11;
@@ -174,5 +184,49 @@ export class Room1 extends BaseRoom {
   };
 
   requestAnimationFrame(fadeIn);
+}
+
+
+// ______________
+// FUNKTION BLUT AM TEDDY
+startBloodFountain(scene, position) {
+  const particles = [];
+  const geometry = new THREE.SphereGeometry(0.10, 8, 8); // größere Tropfen
+  const material = new THREE.MeshBasicMaterial({ color: 0x730f0f, transparent: true, opacity: 0.95 });
+
+  function spawnBloodParticle() {
+    const particle = new THREE.Mesh(geometry, material.clone());
+    particle.position.copy(position);
+    particle.position.y += 2; // etwas höher am Teddy
+    // Starke, zufällige Flugrichtung, vor allem nach oben und zur Seite
+    particle.userData.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.2,
+      Math.random() * 0.4 + 0.05,
+      (Math.random() - 0.5) * 0.2
+    );
+    scene.add(particle);
+    particles.push(particle);
+  }
+
+  // Animation für alle Partikel
+  function animateParticles() {
+    // Jede Frame ein paar neue Partikel erzeugen
+    for (let i = 0; i < 3; i++) spawnBloodParticle();
+
+    // Partikel bewegen und verblassen lassen
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.position.add(p.userData.velocity);
+      p.userData.velocity.y -= 0.003; // Schwerkraft
+      p.material.opacity -= 0.018;
+      if (p.material.opacity <= 0) {
+        scene.remove(p);
+        particles.splice(i, 1);
+      }
+    }
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
 }
 }
