@@ -5,11 +5,72 @@ import { registerInteractive } from '../../interactions/useRayInteraction.js';
 import { BaseRoom } from './BaseRoom.js';
 import { createBlubberblasen } from '../../objects/blubberblasen.js';
 import { spawnBubbleEffect } from '../../objects/blubberblasen.js';
+import { triggerOrangeFogAndLight } from '../../objects/blubberblasen.js';
+import { startBloodPool } from '../../objects/teddy.js';
+import { startBloodFountain } from '../../objects/teddy.js';
+import { makeRadioInteractive, makeLampInteractive, makeTVInteractive } from '../../objects/radio.js';
 
 
 export class Room1 extends BaseRoom {
   constructor(scene) {
     super(scene);
+    this.radioOn = false;
+    this.lampOn = false;
+    this.tvOn = false;
+    this.interactionsLocked = false;
+    this.blubberStarted = false;
+  }
+
+  checkAllOn() {
+    if (this.radioOn && this.lampOn && this.tvOn && !this.interactionsLocked) {
+      this.interactionsLocked = true;
+      // Sperre alle Interaktionen
+      if (this.radioLock) this.radioLock();
+      if (this.lampLock) this.lampLock();
+      if (this.tvLock) this.tvLock();
+      this.flackerUndBlubber();
+    }
+  }
+
+  flackerUndBlubber() {
+    const origAmbient = this.ambientLight.color.clone();
+    const origDir = this.dirLight.color.clone();
+    let count = 0;
+    const flacker = () => {
+      if (count++ < 8) {
+        this.ambientLight.intensity = (count % 2 === 0) ? 0.4 : 0.7;
+        this.dirLight.intensity = (count % 2 === 0) ? 0.1 : 1.2;
+        setTimeout(flacker, 80);
+      } else {
+        this.ambientLight.intensity = 0.4;
+        this.dirLight.intensity = 0.8;
+        this.ambientLight.color.copy(origAmbient);
+        this.dirLight.color.copy(origDir);
+        this.showBlubberblasen();
+      }
+    };
+    flacker();
+  }
+
+  showBlubberblasen() {
+    if (this.blubberStarted) return;
+    this.blubberStarted = true;
+    const blubber = createBlubberblasen(this.scene);
+    this.animateBlubberblasen = blubber.animate;
+    this.bubbles = blubber.bubbleArray;
+    this.bubbles.forEach(bubble => {
+      registerInteractive(bubble, (hit) => {
+        this.scene.remove(hit);
+        hit.userData.removed = true;
+        spawnBubbleEffect(this.scene, hit.position);
+        if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
+          triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
+          setTimeout(() => {
+            this.spawnTeddyAndButton();
+          }, 2200);
+        }
+      });
+    });
   }
 
   init() {
@@ -64,7 +125,7 @@ export class Room1 extends BaseRoom {
     this.add(ceiling);
 
     // Kommode
-    loader.load('src/objects/models/wardrobe/kids_dresser_chest_of_drawers.glb', (gltf) => {
+    loader.load('src/objects/models/room_1/wardrobe/kids_dresser_chest_of_drawers.glb', (gltf) => {
       const wardrobe = gltf.scene;
       wardrobe.scale.set(2.5, 2.5, 2.5);
       wardrobe.position.set(0, 1.2, -9.2);
@@ -72,25 +133,61 @@ export class Room1 extends BaseRoom {
     });
 
     // Bett
-    loader.load('src/objects/models/bed/old_bed.glb', (gltf) => {
+    loader.load('src/objects/models/room_1/bed/old_bed.glb', (gltf) => {
       const bed = gltf.scene;
       bed.scale.set(4, 4, 4);
       bed.position.set(7, 0.1, -5);
       this.add(bed);
     });
 
-    // Teddy Bär
-    loader.load('src/objects/models/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
-      const teddy = gltf.scene;
-      teddy.scale.set(30, 30, 30);
-      teddy.position.set(-8, -0.9, 0);
-      teddy.rotation.y = Math.PI;
-      this.add(teddy);
+    // Radio
+    loader.load('src/objects/models/room_1/radio/radio.glb', (gltf) => {
+      const radio = gltf.scene;
+      radio.scale.set(0.005, 0.005, 0.005);
+      radio.position.set(0, 2.4, -9.1);
+      radio.rotation.y = Math.PI
+      this.add(radio);
 
-      // Starte die Blutfontäne dauerhaft
-      this.startBloodFountain(this.scene, teddy.position);
+      this.radioLock = makeRadioInteractive(radio, 'assets/audio/radio-music.mp3', this);
     });
 
+    // Lamp
+    loader.load('src/objects/models/room_1/lamp/lamp.glb', (gltf) => {
+      const lamp = gltf.scene;
+      lamp.scale.set(0.9, 0.9, 0.9);
+      lamp.position.set(7, 0.1, 7);
+      this.add(lamp);
+
+      // Unsichtbarer, aber klickbarer Quader um die Lampe
+      const boxGeometry = new THREE.BoxGeometry(3, 10, 3); 
+      const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0 });
+      const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
+      hitbox.position.set(0, 1, 0); // Position relativ zur Lampe (ggf. anpassen)
+      lamp.add(hitbox);
+
+      this.lampLock = makeLampInteractive(hitbox, this.ambientLight, this.dirLight, this);
+    });
+
+    // TV
+    loader.load('src/objects/models/room_1/tv/small_table.glb', (gltf) => {
+      const table = gltf.scene;
+      table.scale.set(1.2, 1.2, 1.2);
+      table.position.set(8.4, 0.5, 3);
+      this.add(table);
+    });
+
+    
+    loader.load('src/objects/models/room_1/tv/tv.glb', (gltf) => {
+      const tv = gltf.scene;
+      tv.scale.set(0.8, 0.8, 0.8);
+      tv.position.set(8, 0.2, 3);
+      tv.rotation.y = Math.PI ;
+      this.add(tv);
+
+      this.tvLock = makeTVInteractive(tv, this);
+    });
+
+/** 
     // Blubberblasen Rätsel
   const blubber = createBlubberblasen(this.scene);
   this.animateBlubberblasen = blubber.animate;
@@ -106,10 +203,16 @@ export class Room1 extends BaseRoom {
 
     // Wenn keine Blasen mehr da sind: Nebel und Licht!
     if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
-      this.triggerOrangeFogAndLight();
+      triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
+
+      // Button und Teddy erst nach kurzer Verzögerung (nach Licht-Übergang) anzeigen:
+      setTimeout(() => {
+        this.spawnTeddyAndButton();
+      }, 2200);
     }
     });
 });
+*/
 
   }
         /**
@@ -124,109 +227,41 @@ export class Room1 extends BaseRoom {
   onSolved() {
     console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
   }
-  // _________________
-  // FUNKTION WENN ALLE BLUBBERBLASEN ANGEKLICKT WURDEN
-  triggerOrangeFogAndLight() {
-    // Zielwerte
-    const fogColor = 0xd48f11;
-    const maxDensity = 0.2; // Weniger dicht für mehr Durchsichtigkeit
-    const fadeInTime = 2000; // ms
-    const holdTime = 4000;   // ms
-    const fadeOutTime = 2500; // ms
 
-    // Nebel initialisieren
-    this.scene.fog = new THREE.FogExp2(fogColor, 1, 12);
+  spawnTeddyAndButton() {
+    const loader = new GLTFLoader();
 
-    // Ursprungsfarben merken
-    const origAmbient = this.ambientLight ? this.ambientLight.color.clone() : null;
-    const origDir = this.dirLight ? this.dirLight.color.clone() : null;
-    const targetColor = new THREE.Color(0xffa500);
+  // Teddy Bär
+  loader.load('src/objects/models/room_1/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
+    const teddy = gltf.scene;
+    teddy.scale.set(30, 30, 30);
+    teddy.position.set(-8, -0.9, 0);
+    teddy.rotation.y = Math.PI;
+    this.add(teddy);
+    this.teddyPosition = teddy.position.clone();
+  });
 
-    // Fade-In
-  let start = null;
-  const fadeIn = (timestamp) => {
-    if (!start) start = timestamp;
-    const elapsed = timestamp - start;
-    const t = Math.min(elapsed / fadeInTime, 1);
-    this.scene.fog.density = t * maxDensity;
+  // Roter Knopf
+  loader.load('src/objects/models/room_1/redbutton/red_button.glb', (gltf) => {
+    const button = gltf.scene;
+    button.scale.set(1, 1, 1);
+    button.position.set(-8.0, 1.5, 4);
+    button.rotation.z = Math.PI / 2 + Math.PI;
+    this.add(button);
 
-    // Lichtfarbe sanft interpolieren
-    if (this.ambientLight && origAmbient) {
-      this.ambientLight.color.lerpColors(origAmbient, targetColor, t);
-    }
-    if (this.dirLight && origDir) {
-      this.dirLight.color.lerpColors(origDir, targetColor, t);
-    }
-
-    if (t < 1) {
-      requestAnimationFrame(fadeIn);
-    } else {
-      // Halte den Nebel für eine Weile
-      setTimeout(() => {
-        // Fade-Out starten
-        start = null;
-        requestAnimationFrame(fadeOut);
-      }, holdTime);
-    }
-  };
-
-  // Fade-Out
-  const fadeOut = (timestamp) => {
-    if (!start) start = timestamp;
-    const elapsed = timestamp - start;
-    const t = Math.min(elapsed / fadeOutTime, 1);
-    this.scene.fog.density = (1 - t) * maxDensity;
-    if (t < 1) {
-      requestAnimationFrame(fadeOut);
-    } else {
-      this.scene.fog = null;
-    }
-  };
-
-  requestAnimationFrame(fadeIn);
-}
-
-
-// ______________
-// FUNKTION BLUT AM TEDDY
-startBloodFountain(scene, position) {
-  const particles = [];
-  const geometry = new THREE.SphereGeometry(0.10, 8, 8); // größere Tropfen
-  const material = new THREE.MeshBasicMaterial({ color: 0x730f0f, transparent: true, opacity: 0.95 });
-
-  function spawnBloodParticle() {
-    const particle = new THREE.Mesh(geometry, material.clone());
-    particle.position.copy(position);
-    particle.position.y += 2; // etwas höher am Teddy
-    // Starke, zufällige Flugrichtung, vor allem nach oben und zur Seite
-    particle.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.2,
-      Math.random() * 0.4 + 0.05,
-      (Math.random() - 0.5) * 0.2
-    );
-    scene.add(particle);
-    particles.push(particle);
-  }
-
-  // Animation für alle Partikel
-  function animateParticles() {
-    // Jede Frame ein paar neue Partikel erzeugen
-    for (let i = 0; i < 3; i++) spawnBloodParticle();
-
-    // Partikel bewegen und verblassen lassen
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.position.add(p.userData.velocity);
-      p.userData.velocity.y -= 0.003; // Schwerkraft
-      p.material.opacity -= 0.018;
-      if (p.material.opacity <= 0) {
-        scene.remove(p);
-        particles.splice(i, 1);
+    button.traverse(child => {
+      if (child.isMesh) {
+        registerInteractive(child, () => {
+          if (!this.bloodStarted && this.teddyPosition) {
+            this.bloodStarted = true;
+            startBloodFountain(this.scene, this.teddyPosition);
+            startBloodPool(this.scene, this.teddyPosition);
+          }
+        });
       }
-    }
-    requestAnimationFrame(animateParticles);
-  }
-  animateParticles();
-
+    });
+  });
 }
+
+
 }

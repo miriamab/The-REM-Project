@@ -30,7 +30,7 @@ export function createBlubberblasen(scene) {
   });
 
   // Erstelle viele Blasen
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 8; i++) {
     const mesh = new THREE.Mesh(geometry, material.clone());
     // x: -9 bis 9, y: 0.5 bis 9.5, z: -9 bis 9 (etwas Abstand zu den Wänden/Boden/Decke)
     mesh.position.x = Math.random() * 18 - 9;
@@ -88,4 +88,65 @@ export function spawnBubbleEffect(scene, position) {
     }
   }
   animateParticles(0);
+}
+
+// FUNKTION WENN ALLE BLUBBERBLASEN ANGEKLICKT WURDEN
+export function triggerOrangeFogAndLight(scene, ambientLight, dirLight) {
+    // Zielwerte
+    const fogColor = 0xd48f11;
+    const maxDensity = 0.2; // Weniger dicht für mehr Durchsichtigkeit
+    const fadeInTime = 2000; // ms
+    const holdTime = 4000;   // ms
+    const fadeOutTime = 2500; // ms
+
+    // Nebel initialisieren
+    scene.fog = new THREE.FogExp2(fogColor, 1, 12);
+
+    // Ursprungsfarben merken
+    const origAmbient = ambientLight ? ambientLight.color.clone() : null;
+    const origDir = dirLight ? dirLight.color.clone() : null;
+    const targetColor = new THREE.Color(0xffa500);
+
+    // Fade-In
+  let start = null;
+  const fadeIn = (timestamp) => {
+    if (!start) start = timestamp;
+    const elapsed = timestamp - start;
+    const t = Math.min(elapsed / fadeInTime, 1);
+    scene.fog.density = t * maxDensity;
+
+    // Lichtfarbe sanft interpolieren
+    if (ambientLight && origAmbient) {
+      ambientLight.color.lerpColors(origAmbient, targetColor, t);
+    }
+    if (dirLight && origDir) {
+      dirLight.color.lerpColors(origDir, targetColor, t);
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(fadeIn);
+    } else {
+      // Halte den Nebel für eine Weile
+      setTimeout(() => {
+        // Fade-Out starten
+        start = null;
+        requestAnimationFrame(fadeOut);
+      }, holdTime);
+    }
+  };
+
+  // Fade-Out
+  const fadeOut = (timestamp) => {
+    if (!start) start = timestamp;
+    const elapsed = timestamp - start;
+    const t = Math.min(elapsed / fadeOutTime, 1);
+    scene.fog.density = (1 - t) * maxDensity;
+    if (t < 1) {
+      requestAnimationFrame(fadeOut);
+    } else {
+      scene.fog = null;
+    }
+  };
+
+  requestAnimationFrame(fadeIn);
 }
