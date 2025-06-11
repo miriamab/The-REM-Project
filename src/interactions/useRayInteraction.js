@@ -26,7 +26,7 @@ export function setupRayInteraction(camera) {
       const callback = registry.get(hit);
       if (callback) {
         console.log("✅ Callback wird ausgeführt");
-        callback();
+        callback(hit);
       } else {
         console.warn("⚠️ Kein Callback für getroffenes Objekt gefunden");
       }

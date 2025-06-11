@@ -39,7 +39,8 @@ export function switchRoom(RoomClass, scene) {
 
   currentRoom = new RoomClass(scene);
   currentRoom.init();
-  scene.add(currentRoom);
+
+  return currentRoom;
 }
 
 /**
