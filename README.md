@@ -20,3 +20,6 @@ Das 3D-Modell für das Einführungsvideo, ungerendert in Blender.
 ![Screenvideo Raum 1](./docs/documentation/Screen_video_Raum1.mp4)
 
 Das Video zeigt den Stand der Rätselimplementierung im ersten Raum in Sprint 2.
+
+## Design Research und Ideation
+[Link zu FigJam Board](https://www.figma.com/board/Tt5eXHgnUpSVIPkEpgLyF2/3D-Game?node-id=0-1&t=mEG6sSPjzyisHiGq-1)
