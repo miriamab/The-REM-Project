@@ -15,7 +15,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = true; 
+const SKIP_CUTSCENE = false; 
 
 let currentRoom = null;
 
