@@ -4,6 +4,7 @@ import { addRealHands } from './objects/hands.js';
 import { setupRaycasting } from './interactions/raycast.js';
 import { setupFirstPersonControls, setColliders } from './controls/FirstPersonControls.js';
 import { setupRayInteraction } from './interactions/useRayInteraction.js';
+import { setupIngameMenu } from './ui/IngameMenu.js';
 
 import { Room1 } from './scenes/rooms/room1.js';
 import { switchRoom, playCutsceneAndSwitch } from './sceneManager.js';
@@ -15,7 +16,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = true; 
+const SKIP_CUTSCENE = false; 
 
 let currentRoom = null;
 
@@ -41,16 +42,36 @@ const { controls, update } = setupFirstPersonControls(camera, renderer);
 //const bubbles = createBlubberblasen(scene);
 
 // --- Animation Loop ---
+let animationId = null;
+let isPaused = false;
 function animate() {
-  requestAnimationFrame(animate);
+  if (isPaused) return;
+  animationId = requestAnimationFrame(animate);
   update();
   renderer.render(scene, camera);
 
   // Blubberblasen hinzufügen für Raum1
   if (currentRoom && typeof currentRoom.animateBlubberblasen === 'function') {
-  currentRoom.animateBlubberblasen();
+    currentRoom.animateBlubberblasen();
   }
 }
+
+function pauseGame() {
+  isPaused = true;
+  if (animationId) cancelAnimationFrame(animationId);
+}
+
+function resumeGame() {
+  if (!isPaused) return;
+  isPaused = false;
+  animate();
+}
+
+// Setup Ingame Menu
+setupIngameMenu({
+  onPause: pauseGame,
+  onResume: resumeGame
+});
 
 //Funktionen aufrufen:
 animate();
