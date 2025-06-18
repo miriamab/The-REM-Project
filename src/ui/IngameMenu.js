@@ -64,6 +64,9 @@ export function setupIngameMenu({ onPause, onResume }) {
   btnQuit.style.color = '#fff';
   btnQuit.style.opacity = '0.0';
   btnQuit.style.cursor = 'pointer';
+  btnQuit.style.opacity = '0'; // Unsichtbar, aber klickbar
+  btnQuit.style.zIndex = '2';
+  btnQuit.style.pointerEvents = 'auto';
   btnQuit.addEventListener('click', () => {
     window.close();
     setTimeout(() => {

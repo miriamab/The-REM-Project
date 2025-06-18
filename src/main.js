@@ -107,3 +107,4 @@ if (SKIP_CUTSCENE) {
     //activateRoomInteractions();
   });
 }
+window.setupIngameMenu = setupIngameMenu;
