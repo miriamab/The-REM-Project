@@ -47,7 +47,9 @@ let isPaused = false;
 function animate() {
   if (isPaused) return;
   animationId = requestAnimationFrame(animate);
-  update();
+  // Nutze das passende Update (je nach deinem Setup)
+  if (typeof update === 'function') update();
+  if (controls && typeof controls.update === 'function') controls.update();
   renderer.render(scene, camera);
 
   // Blubberblasen hinzufügen für Raum1
