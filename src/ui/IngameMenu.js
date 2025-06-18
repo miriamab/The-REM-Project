@@ -6,72 +6,73 @@ export function setupIngameMenu({ onPause, onResume }) {
   let wasPointerLocked = false;
   let animationPaused = false;
 
-  // Menü-Overlay erstellen
-  const overlay = document.createElement('div');
-  overlay.style.position = 'fixed';
-  overlay.style.left = '0';
-  overlay.style.top = '0';
-  overlay.style.width = '100vw';
-  overlay.style.height = '100vh';
-  overlay.style.background = 'rgba(30,30,30,0.7)';
-  overlay.style.display = 'flex';
-  overlay.style.flexDirection = 'column';
-  overlay.style.justifyContent = 'center';
-  overlay.style.alignItems = 'center';
-  overlay.style.zIndex = '2000';
-  overlay.style.visibility = 'hidden';
+  // Menü-Overlay als Fullscreen (wie Startmenü)
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.top = '0';
+  container.style.left = '0';
+  container.style.width = '100vw';
+  container.style.height = '100vh';
+  container.style.zIndex = '2000';
+  container.style.display = 'block';
+  container.style.visibility = 'hidden';
 
-  // Menü-Box
-  const menuBox = document.createElement('div');
-  menuBox.style.background = 'rgba(50,50,50,0.85)';
-  menuBox.style.borderRadius = '16px';
-  menuBox.style.padding = '32px 48px';
-  menuBox.style.display = 'flex';
-  menuBox.style.flexDirection = 'column';
-  menuBox.style.gap = '24px';
-  menuBox.style.boxShadow = '0 4px 32px rgba(0,0,0,0.3)';
+  // Menübild: immer Fullscreen, ggf. beschnitten
+  const menuImg = document.createElement('img');
+  menuImg.src = 'assets/images/ingame-menu.png';
+  menuImg.style.position = 'absolute';
+  menuImg.style.top = '0';
+  menuImg.style.left = '0';
+  menuImg.style.width = '100vw';
+  menuImg.style.height = '100vh';
+  menuImg.style.objectFit = 'cover';
+  menuImg.style.pointerEvents = 'none';
+  container.appendChild(menuImg);
 
-  // Titel
-  const title = document.createElement('h2');
-  title.innerText = 'Pause';
-  title.style.color = '#fff';
-  title.style.textAlign = 'center';
-  menuBox.appendChild(title);
-
-  // Continue-Button
+  // Continue-Button (Beispiel: 960, 600 im 1920x1080-Design)
   const btnContinue = document.createElement('button');
   btnContinue.innerText = 'Continue';
-  btnContinue.style.padding = '12px 32px';
-  btnContinue.style.fontSize = '1.2em';
+  btnContinue.style.position = 'absolute';
+  btnContinue.style.left = (960 / 1920 * 100) + '%'; // 50%
+  btnContinue.style.top = (550 / 1080 * 100) + '%';  // 55.6%
+  btnContinue.style.transform = 'translate(-50%, -50%)';
+  btnContinue.style.width = '18vw';
+  btnContinue.style.height = '8vh';
+  btnContinue.style.fontSize = '2vw';
   btnContinue.style.borderRadius = '8px';
   btnContinue.style.border = 'none';
   btnContinue.style.background = '#4caf50';
   btnContinue.style.color = '#fff';
   btnContinue.style.cursor = 'pointer';
+  btnContinue.style.opacity = '0.0'; // Startet unsichtbar
   btnContinue.addEventListener('click', closeMenu);
-  menuBox.appendChild(btnContinue);
+  container.appendChild(btnContinue);
 
-  // Quit-Button
+  // Quit-Button (Beispiel: 960, 900 im 1920x1080-Design)
   const btnQuit = document.createElement('button');
   btnQuit.innerText = 'Quit';
-  btnQuit.style.padding = '12px 32px';
-  btnQuit.style.fontSize = '1.2em';
+  btnQuit.style.position = 'absolute';
+  btnQuit.style.left = (960 / 1920 * 100) + '%'; // 50%
+  btnQuit.style.top = (950 / 1080 * 100) + '%';  // 83.3%
+  btnQuit.style.transform = 'translate(-50%, -50%)';
+  btnQuit.style.width = '18vw';
+  btnQuit.style.height = '8vh';
+  btnQuit.style.fontSize = '2vw';
   btnQuit.style.borderRadius = '8px';
   btnQuit.style.border = 'none';
   btnQuit.style.background = '#e53935';
   btnQuit.style.color = '#fff';
+  btnQuit.style.opacity = '0.0';
   btnQuit.style.cursor = 'pointer';
   btnQuit.addEventListener('click', () => {
     window.close();
-    // Falls window.close() nicht funktioniert, Hinweis anzeigen
     setTimeout(() => {
       if (!window.closed) alert('Seite kann nicht automatisch geschlossen werden. Bitte Tab manuell schließen.');
     }, 200);
   });
-  menuBox.appendChild(btnQuit);
+  container.appendChild(btnQuit);
 
-  overlay.appendChild(menuBox);
-  document.body.appendChild(overlay);
+  document.body.appendChild(container);
 
   // ESC-Handler
   document.addEventListener('keydown', (e) => {
@@ -84,7 +85,7 @@ export function setupIngameMenu({ onPause, onResume }) {
   function openMenu() {
     if (isOpen) return;
     isOpen = true;
-    overlay.style.visibility = 'visible';
+    container.style.visibility = 'visible';
     // PointerLock ggf. verlassen
     if (document.pointerLockElement) {
       wasPointerLocked = true;
@@ -101,9 +102,8 @@ export function setupIngameMenu({ onPause, onResume }) {
   function closeMenu() {
     if (!isOpen) return;
     isOpen = false;
-    overlay.style.visibility = 'hidden';
+    container.style.visibility = 'hidden';
     if (wasPointerLocked) {
-      // PointerLock wiederherstellen
       setTimeout(() => {
         if (document.body) document.body.click();
       }, 100);

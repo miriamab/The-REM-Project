@@ -16,7 +16,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = false; 
+const SKIP_CUTSCENE = true; 
 
 let currentRoom = null;
 
@@ -97,6 +97,7 @@ document.body.appendChild(crosshair);
 if (SKIP_CUTSCENE) {
   currentRoom = switchRoom(Room1, scene);
   setColliders(currentRoom.colliders); // <--- NEU
+  crosshair.style.display = '';
   //activateRoomInteractions();
 } else {
   playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
