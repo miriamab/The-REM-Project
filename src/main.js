@@ -15,7 +15,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = true; 
+const SKIP_CUTSCENE = false; 
 
 let currentRoom = null;
 
@@ -55,19 +55,9 @@ function animate() {
 //Funktionen aufrufen:
 animate();
 
-// --- Starte mit Cutscene, dann Raum ---
-if (SKIP_CUTSCENE) {
-  currentRoom = switchRoom(Room1, scene);
-  //activateRoomInteractions();
-} else {
-  playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
-    currentRoom = switchRoom(Room1, scene);
-    //activateRoomInteractions();
-  });
-}
-
 // Fadenkreuz als HTML-Element hinzufügen
 const crosshair = document.createElement('div');
+crosshair.id = 'crosshair';
 crosshair.style.position = 'fixed';
 crosshair.style.left = '50%';
 crosshair.style.top = '50%';
@@ -81,3 +71,15 @@ crosshair.style.zIndex = '1000';
 crosshair.style.pointerEvents = 'none';
 crosshair.style.opacity = '0.7';
 document.body.appendChild(crosshair);
+
+// --- Starte mit Cutscene, dann Raum ---
+if (SKIP_CUTSCENE) {
+  currentRoom = switchRoom(Room1, scene);
+  //activateRoomInteractions();
+} else {
+  playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
+    crosshair.style.display = '';
+    currentRoom = switchRoom(Room1, scene);
+    //activateRoomInteractions();
+  });
+}

@@ -52,5 +52,12 @@ export function switchRoom(RoomClass, scene) {
  */
 export function playCutsceneAndSwitch(videoPath, onEnd) {
   console.log("🎥 Starte Cutscene:", videoPath); // Debug-Log
-  playVideoCutscene(videoPath, onEnd);
+  const crosshair = document.getElementById('crosshair');
+  if (crosshair) crosshair.style.display = 'none';
+
+  playVideoCutscene(videoPath, () => {
+    // Fadenkreuz wieder einblenden
+    if (crosshair) crosshair.style.display = '';
+    if (onEnd) onEnd();
+  });
 }
