@@ -14,6 +14,7 @@ import { makeRadioInteractive, makeLampInteractive, makeTVInteractive } from '..
 export class Room1 extends BaseRoom {
   constructor(scene) {
     super(scene);
+    this.colliders = [];
     this.radioOn = false;
     this.lampOn = false;
     this.tvOn = false;
@@ -107,13 +108,55 @@ export class Room1 extends BaseRoom {
     floor.position.y = 0.01;
     this.add(floor);
 
-    // Wände
-    const room = new THREE.Mesh(
-      new THREE.BoxGeometry(20, 10, 20),
-      new THREE.MeshStandardMaterial({ map: wallTexture, side: THREE.DoubleSide })
-    );
-    room.position.y = 5;
-    this.add(room);
+    // Sichtbare Wände (mit Textur)
+const visibleWallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture, side: THREE.DoubleSide });
+
+// Rückwand (sichtbar)
+const visibleBackWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 0.5), visibleWallMaterial);
+visibleBackWall.position.set(0, 5, -10);
+this.add(visibleBackWall);
+
+// Vorderwand (sichtbar)
+const visibleFrontWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 0.5), visibleWallMaterial);
+visibleFrontWall.position.set(0, 5, 10);
+this.add(visibleFrontWall);
+
+// Linke Wand (sichtbar)
+const visibleLeftWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 10, 20), visibleWallMaterial);
+visibleLeftWall.position.set(-10, 5, 0);
+this.add(visibleLeftWall);
+
+// Rechte Wand (sichtbar)
+const visibleRightWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 10, 20), visibleWallMaterial);
+visibleRightWall.position.set(10, 5, 0);
+this.add(visibleRightWall);
+
+// Unsichtbare Collider-Wände (ohne Textur)
+const colliderWallMaterial = new THREE.MeshBasicMaterial({ visible: false });
+
+// Rückwand (Collider)
+const colliderBackWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 0.5), colliderWallMaterial);
+colliderBackWall.position.set(0, 5, -10);
+this.add(colliderBackWall);
+this.colliders.push(colliderBackWall);
+
+// Vorderwand (Collider)
+const colliderFrontWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 0.5), colliderWallMaterial);
+colliderFrontWall.position.set(0, 5, 10);
+this.add(colliderFrontWall);
+this.colliders.push(colliderFrontWall);
+
+// Linke Wand (Collider)
+const colliderLeftWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 10, 20), colliderWallMaterial);
+colliderLeftWall.position.set(-10, 5, 0);
+this.add(colliderLeftWall);
+this.colliders.push(colliderLeftWall);
+
+// Rechte Wand (Collider)
+const colliderRightWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 10, 20), colliderWallMaterial);
+colliderRightWall.position.set(10, 5, 0);
+this.add(colliderRightWall);
+this.colliders.push(colliderRightWall);
 
     // Decke
     const ceiling = new THREE.Mesh(
@@ -130,6 +173,7 @@ export class Room1 extends BaseRoom {
       wardrobe.scale.set(2.5, 2.5, 2.5);
       wardrobe.position.set(0, 1.2, -9.2);
       this.add(wardrobe);
+      this.colliders.push(wardrobe);
     });
 
     // Bett
@@ -138,6 +182,7 @@ export class Room1 extends BaseRoom {
       bed.scale.set(4, 4, 4);
       bed.position.set(7, 0.1, -5);
       this.add(bed);
+      this.colliders.push(bed);
     });
 
     // Radio
@@ -164,6 +209,7 @@ export class Room1 extends BaseRoom {
       const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
       hitbox.position.set(0, 1, 0); // Position relativ zur Lampe (ggf. anpassen)
       lamp.add(hitbox);
+      this.colliders.push(hitbox);
 
       this.lampLock = makeLampInteractive(hitbox, this.ambientLight, this.dirLight, this);
     });
@@ -174,6 +220,7 @@ export class Room1 extends BaseRoom {
       table.scale.set(1.2, 1.2, 1.2);
       table.position.set(8.4, 0.5, 3);
       this.add(table);
+      this.colliders.push(table);
     });
 
     
@@ -183,6 +230,7 @@ export class Room1 extends BaseRoom {
       tv.position.set(8, 0.2, 3);
       tv.rotation.y = Math.PI ;
       this.add(tv);
+      this.colliders.push(tv);
 
       this.tvLock = makeTVInteractive(tv, this);
     });
@@ -238,6 +286,7 @@ export class Room1 extends BaseRoom {
     teddy.position.set(-8, -0.9, 0);
     teddy.rotation.y = Math.PI;
     this.add(teddy);
+    this.colliders.push(teddy);
     this.teddyPosition = teddy.position.clone();
   });
 

@@ -2,10 +2,10 @@
 import * as THREE from 'three';
 import { addRealHands } from './objects/hands.js';
 import { setupRaycasting } from './interactions/raycast.js';
-import { setupFirstPersonControls } from './controls/FirstPersonControls.js';
+import { setupFirstPersonControls, setColliders } from './controls/FirstPersonControls.js';
 import { setupRayInteraction } from './interactions/useRayInteraction.js';
 
-import { Room1 } from './scenes/rooms/Room1.js';
+import { Room1 } from './scenes/rooms/room1.js';
 import { switchRoom, playCutsceneAndSwitch } from './sceneManager.js';
 import { spawnBubbleEffect } from './objects/blubberblasen.js';
 import { createBlubberblasen } from './objects/blubberblasen.js';
@@ -15,7 +15,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = false; 
+const SKIP_CUTSCENE = true; 
 
 let currentRoom = null;
 
@@ -75,11 +75,13 @@ document.body.appendChild(crosshair);
 // --- Starte mit Cutscene, dann Raum ---
 if (SKIP_CUTSCENE) {
   currentRoom = switchRoom(Room1, scene);
+  setColliders(currentRoom.colliders); // <--- NEU
   //activateRoomInteractions();
 } else {
   playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
     crosshair.style.display = '';
     currentRoom = switchRoom(Room1, scene);
+    setColliders(currentRoom.colliders); // <--- NEU
     //activateRoomInteractions();
   });
 }
