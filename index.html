@@ -20,17 +20,18 @@
       };
     </script>
 
-    <div id="menu-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000;">
-      <!-- Dein Menüdesign hier -->
-      <img src="assets/images/menu_overlay.png" alt="Menu Design" style="width: 100%; height: 100%; object-fit: cover;">
+    <div id="menu-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #111; z-index: 2000;">
+      <div id="menu-aspect" style="position: relative; width: 90vw; max-width: 100vw; aspect-ratio: 16/9; background: #222; box-shadow: 0 0 40px #000; display: flex; align-items: center; justify-content: center;">
+        <img src="assets/images/menu_overlay.png" alt="Menu Design" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
 
-      <!-- Sichtbarer Start-Button -->
-      <button id="start-button" style="position: absolute; top: 380px; left: 240px; transform: translate(-50%, -50%); width: 200px; height: 50px; font-size: 2rem; cursor: pointer; background: #fff; border-radius: 10px; border: 2px solid #333; opacity: 0;">Start</button>
+        <!-- Sichtbarer Start-Button -->
+        <button id="start-button" style="position: absolute; left: 15.5%; top: 47.19%; transform: translate(-50%, -50%); width: 12%; height: 7%; font-size: 2vw; background: #fff; border-radius: 10px; border: 2px solid #333; cursor: pointer;">Start</button>
+      </div>
     </div>
 
     <script>
       document.getElementById('start-button').addEventListener('click', () => {
-        document.getElementById('menu-overlay').style.display = 'none';
+        document.getElementById('menu-container').style.display = 'none';
         document.body.style.cursor = 'none';
 
         // main.js erst jetzt laden:
