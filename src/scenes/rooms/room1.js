@@ -9,6 +9,7 @@ import { triggerOrangeFogAndLight } from '../../objects/blubberblasen.js';
 import { startBloodPool } from '../../objects/teddy.js';
 import { startBloodFountain } from '../../objects/teddy.js';
 import { makeRadioInteractive, makeLampInteractive, makeTVInteractive } from '../../objects/radio.js';
+import { playCutsceneAndSwitch, switchRoom} from '../../sceneManager.js';
 
 
 export class Room1 extends BaseRoom {
@@ -274,6 +275,7 @@ this.colliders.push(colliderRightWall);
    */
   onSolved() {
     console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
+    playCutsceneAndSwitch('/cutscenes/REM_cutscene_2.mp4')
   }
 
   spawnTeddyAndButton() {
@@ -305,6 +307,7 @@ this.colliders.push(colliderRightWall);
             this.bloodStarted = true;
             startBloodFountain(this.scene, this.teddyPosition);
             startBloodPool(this.scene, this.teddyPosition);
+            this.onSolved(); //Vorzeitiger Auslöser für Cutscene 2
           }
         });
       }
