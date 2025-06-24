@@ -16,7 +16,6 @@ export function playVideoCutscene(path, onEnd) {
       video.playsInline = true;
       document.body.appendChild(video);
       video.style.objectFit = 'cover';
-
     }
   
     video.src = path;
@@ -26,11 +25,16 @@ export function playVideoCutscene(path, onEnd) {
     // WebGL-Canvas ausblenden
     const canvas = document.querySelector('canvas');
     if (canvas) canvas.style.display = 'none';
+
+    // Fadenkreuz ausblenden (sofern vorhanden)
+    const crosshair = document.getElementById('crosshair');
+    if (crosshair) crosshair.style.display = 'none';
   
     video.onended = () => {
       video.style.display = 'none';
       if (canvas) canvas.style.display = 'block';
+      // Fadenkreuz wieder einblenden
+      if (crosshair) crosshair.style.display = '';
       if (onEnd) onEnd();
     };
-  }
-  
+}
