@@ -12,7 +12,7 @@ export function playVideoCutscene(path, onEnd) {
       video.style.height = '100%';
       video.style.zIndex = '1000';
       video.autoplay = true;
-      video.muted = true;
+      video.muted = false; // Sound standardmäßig an
       video.playsInline = true;
       document.body.appendChild(video);
       video.style.objectFit = 'cover';
@@ -20,6 +20,7 @@ export function playVideoCutscene(path, onEnd) {
   
     video.src = path;
     video.style.display = 'block';
+    video.muted = false; // Stelle sicher, dass der Sound an ist
     video.play();
   
     // WebGL-Canvas ausblenden
@@ -37,4 +38,6 @@ export function playVideoCutscene(path, onEnd) {
       if (crosshair) crosshair.style.display = '';
       if (onEnd) onEnd();
     };
+
 }
+

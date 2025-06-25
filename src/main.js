@@ -4,6 +4,7 @@ import { addRealHands } from './objects/hands.js';
 import { setupRaycasting } from './interactions/raycast.js';
 import { setupFirstPersonControls, setColliders } from './controls/FirstPersonControls.js';
 import { setupRayInteraction } from './interactions/useRayInteraction.js';
+import { setupIngameMenu } from './ui/IngameMenu.js';
 
 import { Room1 } from './scenes/rooms/room1.js';
 import { switchRoom, playCutsceneAndSwitch } from './sceneManager.js';
@@ -41,16 +42,38 @@ const { controls, update } = setupFirstPersonControls(camera, renderer);
 //const bubbles = createBlubberblasen(scene);
 
 // --- Animation Loop ---
+let animationId = null;
+let isPaused = false;
 function animate() {
-  requestAnimationFrame(animate);
-  update();
+  if (isPaused) return;
+  animationId = requestAnimationFrame(animate);
+  // Nutze das passende Update (je nach deinem Setup)
+  if (typeof update === 'function') update();
+  if (controls && typeof controls.update === 'function') controls.update();
   renderer.render(scene, camera);
 
   // Blubberblasen hinzufügen für Raum1
   if (currentRoom && typeof currentRoom.animateBlubberblasen === 'function') {
-  currentRoom.animateBlubberblasen();
+    currentRoom.animateBlubberblasen();
   }
 }
+
+function pauseGame() {
+  isPaused = true;
+  if (animationId) cancelAnimationFrame(animationId);
+}
+
+function resumeGame() {
+  if (!isPaused) return;
+  isPaused = false;
+  animate();
+}
+
+// Setup Ingame Menu
+setupIngameMenu({
+  onPause: pauseGame,
+  onResume: resumeGame
+});
 
 //Funktionen aufrufen:
 animate();
@@ -76,6 +99,7 @@ document.body.appendChild(crosshair);
 if (SKIP_CUTSCENE) {
   currentRoom = switchRoom(Room1, scene);
   setColliders(currentRoom.colliders); // <--- NEU
+  crosshair.style.display = '';
   //activateRoomInteractions();
 } else {
   playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
@@ -85,3 +109,4 @@ if (SKIP_CUTSCENE) {
     //activateRoomInteractions();
   });
 }
+window.setupIngameMenu = setupIngameMenu;
