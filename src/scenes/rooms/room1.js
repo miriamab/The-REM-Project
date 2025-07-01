@@ -324,6 +324,11 @@ this.colliders.push(colliderRightWall);
               playNarratorClip('fuenf'); // Audio fuenf abspielen, wenn Teddy zu bluten beginnt
               startBloodFountain(this.scene, this.teddyPosition);
               startBloodPool(this.scene, this.teddyPosition);
+              // Bear-Sound nach 5 Sekunden abspielen
+              setTimeout(() => {
+                const bearSound = new Audio('assets/audio/bear-sound.wav');
+                bearSound.play();
+              }, 5000);
             }
           });
         }
