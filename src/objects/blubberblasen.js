@@ -93,7 +93,7 @@ export function spawnBubbleEffect(scene, position) {
 // FUNKTION WENN ALLE BLUBBERBLASEN ANGEKLICKT WURDEN
 export function triggerOrangeFogAndLight(scene, ambientLight, dirLight) {
     // Zielwerte
-    const fogColor = 0xd48f11;
+    const fogColor = 0x42b2a9; // neue Farbe: #42b2a9
     const maxDensity = 0.2; // Weniger dicht für mehr Durchsichtigkeit
     const fadeInTime = 2000; // ms
     const holdTime = 4000;   // ms
@@ -105,7 +105,7 @@ export function triggerOrangeFogAndLight(scene, ambientLight, dirLight) {
     // Ursprungsfarben merken
     const origAmbient = ambientLight ? ambientLight.color.clone() : null;
     const origDir = dirLight ? dirLight.color.clone() : null;
-    const targetColor = new THREE.Color(0xffa500);
+    const targetColor = new THREE.Color(0x42b2a9); // neue Farbe
 
     // Fade-In
   let start = null;
