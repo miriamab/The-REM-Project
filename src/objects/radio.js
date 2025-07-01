@@ -57,12 +57,13 @@ export function makeRadioInteractive(radioObject, audioUrl, room) {
   return lock;
 }
 
-export function makeLampInteractive(lampObject, ambientLight, dirLight, room) {
+export function makeLampInteractive(lampObject, ambientLight, dirLight, room, onFirstWarm) {
   let warm = false;
   let locked = false;
   const origAmbient = ambientLight.color.clone();
   const origDir = dirLight.color.clone();
   const warmColor = new THREE.Color(0xffdc91);
+  let lampAudioPlayed = false;
 
   function lock() {
     locked = true;
@@ -78,6 +79,10 @@ export function makeLampInteractive(lampObject, ambientLight, dirLight, room) {
           ambientLight.color.copy(warmColor);
           dirLight.color.copy(warmColor);
           if (room) { room.lampOn = true; room.checkAllOn(); }
+          if (onFirstWarm && !lampAudioPlayed) {
+            onFirstWarm();
+            lampAudioPlayed = true;
+          }
         } else {
           ambientLight.color.copy(origAmbient);
           dirLight.color.copy(origDir);
