@@ -70,7 +70,9 @@ export class Room1 extends BaseRoom {
           playNarratorClip('drei'); // Audio drei nach 2 abgeschossenen Bubbles
         }
         if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
-          playNarratorClip('vier'); // Audio vier abspielen, wenn alle Bubbles entfernt sind
+          playNarratorClip('vier');
+          // Wandbilder nach letzter Bubble sichtbar machen
+          if (this.wandbilder) this.wandbilder.forEach(mesh => mesh.visible = true);
           triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
           setTimeout(() => {
             this.spawnTeddyAndButton();
@@ -289,43 +291,43 @@ const quallenMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(4, 5),
   new THREE.MeshBasicMaterial({ map: quallenTexture, transparent: true })
 );
-quallenMesh.position.set(9.4, 4, 0); // Quallen an die rechte Seitenwand
-quallenMesh.rotation.y = -Math.PI / 2; // Wand ausrichten
+quallenMesh.position.set(9.4, 4, 0);
+quallenMesh.rotation.y = -Math.PI / 2;
+quallenMesh.visible = false;
 this.add(quallenMesh);
 
 const wallPaintMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(6, 4), // 0.5x kleiner als vorher (9x9 -> 4.5x4.5)
+  new THREE.PlaneGeometry(6, 4),
   new THREE.MeshBasicMaterial({ map: wallPaintTexture, transparent: true })
 );
-wallPaintMesh.position.set(0, 4, 9.7); // x = -5 (links), y = 4, z = 10 (Vorderwand)
-wallPaintMesh.rotation.y = Math.PI; // zur Raummitte ausrichten
+wallPaintMesh.position.set(0, 4, 9.7);
+wallPaintMesh.rotation.y = Math.PI;
+wallPaintMesh.visible = false;
 this.add(wallPaintMesh);
 
-// Wandbilder wie bei quallen und wallpaint platzieren (leicht vor die Wand)
 const wallTeddyTexture = textureLoader.load('assets/images/wall_teddy.png');
 const wallSplashTexture = textureLoader.load('assets/images/wall_splash.png');
 
-// Rechte Wand (x = 10)
 const wallSplashMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(20, 10),
   new THREE.MeshBasicMaterial({ map: wallSplashTexture, transparent: true })
 );
-wallSplashMesh.position.set(0, 4, -9.7); // mittig und auf Augenhöhe an der Vorderwand
-wallSplashMesh.rotation.y = 0; // zur Raummitte ausrichten
+wallSplashMesh.position.set(0, 4, -9.7);
+wallSplashMesh.rotation.y = 0;
+wallSplashMesh.visible = false;
 this.add(wallSplashMesh);
 
-// Linke Wand (x = -10)
 const wallTeddyMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(20, 10),
   new THREE.MeshBasicMaterial({ map: wallTeddyTexture, transparent: true })
 );
-wallTeddyMesh.position.set(-9.7, 5, 0); // leicht vor die linke Wand
+wallTeddyMesh.position.set(-9.7, 5, 0);
 wallTeddyMesh.rotation.y = Math.PI / 2;
+wallTeddyMesh.visible = false;
 this.add(wallTeddyMesh);
 
-
-
-
+// Referenzen speichern
+this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
 
   } // Ende init
 
