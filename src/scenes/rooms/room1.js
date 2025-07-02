@@ -281,8 +281,7 @@ this.colliders.push(colliderRightWall);
       playNarratorClip('eins');
     }, 25000); // 25 Sekunden
 
-    // Bilder auf die gegenüberliegende Seite platzieren
-// Quallen rechts, wall_paint links, wall_paint 3x so groß
+
 const quallenTexture = textureLoader.load('assets/images/quallen.png');
 const wallPaintTexture = textureLoader.load('assets/images/wall_paint.png');
 
@@ -301,6 +300,31 @@ const wallPaintMesh = new THREE.Mesh(
 wallPaintMesh.position.set(0, 4, 9.7); // x = -5 (links), y = 4, z = 10 (Vorderwand)
 wallPaintMesh.rotation.y = Math.PI; // zur Raummitte ausrichten
 this.add(wallPaintMesh);
+
+// Wandbilder wie bei quallen und wallpaint platzieren (leicht vor die Wand)
+const wallTeddyTexture = textureLoader.load('assets/images/wall_teddy.png');
+const wallSplashTexture = textureLoader.load('assets/images/wall_splash.png');
+
+// Rechte Wand (x = 10)
+const wallSplashMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 10),
+  new THREE.MeshBasicMaterial({ map: wallSplashTexture, transparent: true })
+);
+wallSplashMesh.position.set(0, 4, 9.7); // mittig und auf Augenhöhe an der Vorderwand
+wallSplashMesh.rotation.y = Math.PI; // zur Raummitte ausrichten
+this.add(wallSplashMesh);
+
+// Linke Wand (x = -10)
+const wallTeddyMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 10),
+  new THREE.MeshBasicMaterial({ map: wallTeddyTexture, transparent: true })
+);
+wallTeddyMesh.position.set(-9.7, 5, 0); // leicht vor die linke Wand
+wallTeddyMesh.rotation.y = Math.PI / 2;
+this.add(wallTeddyMesh);
+
+
+
 
 
   } // Ende init
