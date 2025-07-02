@@ -9,7 +9,7 @@ import { triggerOrangeFogAndLight } from '../../objects/blubberblasen.js';
 import { startBloodPool } from '../../objects/teddy.js';
 import { startBloodFountain } from '../../objects/teddy.js';
 import { makeRadioInteractive, makeLampInteractive, makeTVInteractive } from '../../objects/radio.js';
-
+import { playNarratorClip } from '../../objects/audios.js';
 
 export class Room1 extends BaseRoom {
   constructor(scene) {
@@ -59,12 +59,18 @@ export class Room1 extends BaseRoom {
     const blubber = createBlubberblasen(this.scene);
     this.animateBlubberblasen = blubber.animate;
     this.bubbles = blubber.bubbleArray;
+    let bubblesPopped = 0;
     this.bubbles.forEach(bubble => {
       registerInteractive(bubble, (hit) => {
         this.scene.remove(hit);
         hit.userData.removed = true;
         spawnBubbleEffect(this.scene, hit.position);
+        bubblesPopped++;
+        if (bubblesPopped === 2) {
+          playNarratorClip('drei'); // Audio drei nach 2 abgeschossenen Bubbles
+        }
         if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
+          playNarratorClip('vier'); // Audio vier abspielen, wenn alle Bubbles entfernt sind
           triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
           setTimeout(() => {
             this.spawnTeddyAndButton();
@@ -72,7 +78,7 @@ export class Room1 extends BaseRoom {
         }
       });
     });
-  }
+  } // Ende showBlubberblasen
 
   init() {
     const scene = this.scene;
@@ -211,6 +217,13 @@ this.colliders.push(colliderRightWall);
       lamp.add(hitbox);
       this.colliders.push(hitbox);
 
+      let lampAudioPlayed = false;
+      this.lampLock = makeLampInteractive(hitbox, this.ambientLight, this.dirLight, this, () => {
+        if (!lampAudioPlayed) {
+          playNarratorClip('zwei'); // Audio zwei nur beim ersten Mal abspielen
+          lampAudioPlayed = true;
+        }
+      });
       this.lampLock = makeLampInteractive(hitbox, this.ambientLight, this.dirLight, this);
     });
 
@@ -262,6 +275,12 @@ this.colliders.push(colliderRightWall);
 });
 */
 
+
+ // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
+    setTimeout(() => {
+      playNarratorClip('eins');
+    }, 25000); // 25 Sekunden
+
     // Bilder auf die gegenüberliegende Seite platzieren
 // Quallen rechts, wall_paint links, wall_paint 3x so groß
 const quallenTexture = textureLoader.load('assets/images/quallen.png');
@@ -284,8 +303,9 @@ wallPaintMesh.rotation.y = Math.PI; // zur Raummitte ausrichten
 this.add(wallPaintMesh);
 
 
-  }
-        /**
+  } // Ende init
+
+  /**
    * Diese Methode wird aufgerufen siehe unten, wenn der Raum erfolgreich abgeschlossen wurde.
    * Hier könnte z. B. eine Tür geöffnet oder ein Rätsel beendet worden sein.
    * 
@@ -296,43 +316,48 @@ this.add(wallPaintMesh);
    */
   onSolved() {
     console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
-  }
+  } // Ende onSolved
 
   spawnTeddyAndButton() {
     const loader = new GLTFLoader();
 
   // Teddy Bär
-  loader.load('src/objects/models/room_1/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
-    const teddy = gltf.scene;
-    teddy.scale.set(30, 30, 30);
-    teddy.position.set(-8, -0.9, 0);
-    teddy.rotation.y = Math.PI;
-    this.add(teddy);
-    this.colliders.push(teddy);
-    this.teddyPosition = teddy.position.clone();
-  });
-
-  // Roter Knopf
-  loader.load('src/objects/models/room_1/redbutton/red_button.glb', (gltf) => {
-    const button = gltf.scene;
-    button.scale.set(1, 1, 1);
-    button.position.set(-8.0, 1.5, 4);
-    button.rotation.z = Math.PI / 2 + Math.PI;
-    this.add(button);
-
-    button.traverse(child => {
-      if (child.isMesh) {
-        registerInteractive(child, () => {
-          if (!this.bloodStarted && this.teddyPosition) {
-            this.bloodStarted = true;
-            startBloodFountain(this.scene, this.teddyPosition);
-            startBloodPool(this.scene, this.teddyPosition);
-          }
-        });
-      }
+    loader.load('src/objects/models/room_1/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
+      const teddy = gltf.scene;
+      teddy.scale.set(30, 30, 30);
+      teddy.position.set(-8, -0.9, 0);
+      teddy.rotation.y = Math.PI;
+      this.add(teddy);
+      this.colliders.push(teddy);
+      this.teddyPosition = teddy.position.clone();
     });
-  });
-}
 
+    // Roter Knopf
+    loader.load('src/objects/models/room_1/redbutton/red_button.glb', (gltf) => {
+      const button = gltf.scene;
+      button.scale.set(1, 1, 1);
+      button.position.set(-8.0, 1.5, 4);
+      button.rotation.z = Math.PI / 2 + Math.PI;
+      this.add(button);
 
-}
+      button.traverse(child => {
+        if (child.isMesh) {
+          registerInteractive(child, () => {
+            if (!this.bloodStarted && this.teddyPosition) {
+              this.bloodStarted = true;
+              playNarratorClip('fuenf'); // Audio fuenf abspielen, wenn Teddy zu bluten beginnt
+              startBloodFountain(this.scene, this.teddyPosition);
+              startBloodPool(this.scene, this.teddyPosition);
+              // Bear-Sound nach 5 Sekunden abspielen
+              setTimeout(() => {
+                const bearSound = new Audio('assets/audio/bear-sound.wav');
+                bearSound.play();
+              }, 5000);
+            }
+          });
+        }
+      });
+    });
+  } // Ende spawnTeddyAndButton
+
+} // Ende Klasse Room1
