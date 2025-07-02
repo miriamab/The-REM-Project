@@ -310,8 +310,8 @@ const wallSplashMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(20, 10),
   new THREE.MeshBasicMaterial({ map: wallSplashTexture, transparent: true })
 );
-wallSplashMesh.position.set(0, 4, 9.7); // mittig und auf Augenhöhe an der Vorderwand
-wallSplashMesh.rotation.y = Math.PI; // zur Raummitte ausrichten
+wallSplashMesh.position.set(0, 4, -9.7); // mittig und auf Augenhöhe an der Vorderwand
+wallSplashMesh.rotation.y = 0; // zur Raummitte ausrichten
 this.add(wallSplashMesh);
 
 // Linke Wand (x = -10)
