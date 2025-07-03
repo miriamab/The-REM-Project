@@ -71,8 +71,10 @@ export class Room1 extends BaseRoom {
         }
         if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
           playNarratorClip('vier');
-          // Wandbilder nach letzter Bubble sichtbar machen
-          if (this.wandbilder) this.wandbilder.forEach(mesh => mesh.visible = true);
+          // Wandbilder nach letzter Bubble mit 3 Sekunden Verzögerung sichtbar machen
+          setTimeout(() => {
+            if (this.wandbilder) this.wandbilder.forEach(mesh => mesh.visible = true);
+          }, 3000);
           triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
           setTimeout(() => {
             this.spawnTeddyAndButton();
@@ -300,7 +302,7 @@ const wallPaintMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(6, 4),
   new THREE.MeshBasicMaterial({ map: wallPaintTexture, transparent: true })
 );
-wallPaintMesh.position.set(0, 4, 9.7);
+wallPaintMesh.position.set(2, 4, 9.7);
 wallPaintMesh.rotation.y = Math.PI;
 wallPaintMesh.visible = false;
 this.add(wallPaintMesh);
