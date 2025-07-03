@@ -11,7 +11,6 @@ import { startBloodFountain } from '../../objects/teddy.js';
 import { makeRadioInteractive, makeLampInteractive, makeTVInteractive } from '../../objects/radio.js';
 import { playNarratorClip } from '../../objects/audios.js';
 
-
 export class Room1 extends BaseRoom {
   constructor(scene) {
     super(scene);
@@ -71,7 +70,11 @@ export class Room1 extends BaseRoom {
           playNarratorClip('drei'); // Audio drei nach 2 abgeschossenen Bubbles
         }
         if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
-          playNarratorClip('vier'); // Audio vier abspielen, wenn alle Bubbles entfernt sind
+          playNarratorClip('vier');
+          // Wandbilder nach letzter Bubble mit 3 Sekunden Verzögerung sichtbar machen
+          setTimeout(() => {
+            if (this.wandbilder) this.wandbilder.forEach(mesh => mesh.visible = true);
+          }, 3000);
           triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
           setTimeout(() => {
             this.spawnTeddyAndButton();
@@ -79,7 +82,7 @@ export class Room1 extends BaseRoom {
         }
       });
     });
-  }
+  } // Ende showBlubberblasen
 
   init() {
     const scene = this.scene;
@@ -225,6 +228,7 @@ this.colliders.push(colliderRightWall);
           lampAudioPlayed = true;
         }
       });
+      this.lampLock = makeLampInteractive(hitbox, this.ambientLight, this.dirLight, this);
     });
 
     // TV
@@ -275,13 +279,61 @@ this.colliders.push(colliderRightWall);
 });
 */
 
-    // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
+
+ // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
     setTimeout(() => {
       playNarratorClip('eins');
     }, 25000); // 25 Sekunden
 
-  }
-        /**
+
+const quallenTexture = textureLoader.load('assets/images/quallen.png');
+const wallPaintTexture = textureLoader.load('assets/images/wall_paint.png');
+
+const quallenMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(4, 5),
+  new THREE.MeshBasicMaterial({ map: quallenTexture, transparent: true })
+);
+quallenMesh.position.set(9.4, 4, 0);
+quallenMesh.rotation.y = -Math.PI / 2;
+quallenMesh.visible = false;
+this.add(quallenMesh);
+
+const wallPaintMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(6, 4),
+  new THREE.MeshBasicMaterial({ map: wallPaintTexture, transparent: true })
+);
+wallPaintMesh.position.set(2, 4, 9.7);
+wallPaintMesh.rotation.y = Math.PI;
+wallPaintMesh.visible = false;
+this.add(wallPaintMesh);
+
+const wallTeddyTexture = textureLoader.load('assets/images/wall_teddy.png');
+const wallSplashTexture = textureLoader.load('assets/images/wall_splash.png');
+
+const wallSplashMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 10),
+  new THREE.MeshBasicMaterial({ map: wallSplashTexture, transparent: true })
+);
+wallSplashMesh.position.set(0, 4, -9.7);
+wallSplashMesh.rotation.y = 0;
+wallSplashMesh.visible = false;
+this.add(wallSplashMesh);
+
+const wallTeddyMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 10),
+  new THREE.MeshBasicMaterial({ map: wallTeddyTexture, transparent: true })
+);
+wallTeddyMesh.position.set(-9.7, 5, 0);
+wallTeddyMesh.rotation.y = Math.PI / 2;
+wallTeddyMesh.visible = false;
+this.add(wallTeddyMesh);
+
+// Referenzen speichern
+this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
+
+  } // Ende init
+
+  /**
    * Diese Methode wird aufgerufen siehe unten, wenn der Raum erfolgreich abgeschlossen wurde.
    * Hier könnte z. B. eine Tür geöffnet oder ein Rätsel beendet worden sein.
    * 
@@ -292,12 +344,12 @@ this.colliders.push(colliderRightWall);
    */
   onSolved() {
     console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
-  }
+  } // Ende onSolved
 
   spawnTeddyAndButton() {
     const loader = new GLTFLoader();
 
-    // Teddy Bär
+  // Teddy Bär
     loader.load('src/objects/models/room_1/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
       const teddy = gltf.scene;
       teddy.scale.set(30, 30, 30);
@@ -334,7 +386,6 @@ this.colliders.push(colliderRightWall);
         }
       });
     });
-  }
+  } // Ende spawnTeddyAndButton
 
-
-}
+} // Ende Klasse Room1
