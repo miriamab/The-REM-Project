@@ -18,6 +18,11 @@ export class Room2 extends BaseRoom {
   init() {
     const scene = this.scene;
 
+    // Bewegungsgeschwindigkeit NUR für Raum 2 setzen
+    if (window.controls && typeof window.controls.velocity !== 'undefined') {
+      window.controls.velocity = 50; // Beispielwert, nach Wunsch anpassen
+    }
+
     // Kamera
     const camera = scene.children.find(obj => obj.isCamera);
     if (camera) scene.camera = camera;
@@ -120,7 +125,7 @@ export class Room2 extends BaseRoom {
     audioLoader.load('sounds/hospital-food-cart-wheeled-79068.mp3', (buffer) => {
       this.atmoSound.setBuffer(buffer);
       this.atmoSound.setLoop(true);
-      this.atmoSound.setVolume(0.2);
+      this.atmoSound.setVolume(0.3);
     });
 
     document.addEventListener('click', () => {

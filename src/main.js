@@ -11,12 +11,16 @@ import { switchRoom, playCutsceneAndSwitch } from './sceneManager.js';
 import { spawnBubbleEffect } from './objects/blubberblasen.js';
 import { createBlubberblasen } from './objects/blubberblasen.js';
 
+import { Room2 } from './scenes/rooms/room2.js';
+
 // --- Grundsetup ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
+const START_ROOM = 2; // 1 = Room1, 2 = Room2
+
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = false; 
+const SKIP_CUTSCENE = true; 
 
 let currentRoom = null;
 
@@ -37,6 +41,7 @@ renderer.domElement.addEventListener('click', () => {
 addRealHands(camera);
 setupRayInteraction(camera);
 const { controls, update } = setupFirstPersonControls(camera, renderer);
+window.controls = controls;
 
 //Bubbles
 //const bubbles = createBlubberblasen(scene);
@@ -96,17 +101,23 @@ crosshair.style.opacity = '0.7';
 document.body.appendChild(crosshair);
 
 // --- Starte mit Cutscene, dann Raum ---
-if (SKIP_CUTSCENE) {
-  currentRoom = switchRoom(Room1, scene);
-  setColliders(currentRoom.colliders); // <--- NEU
-  crosshair.style.display = '';
-  //activateRoomInteractions();
-} else {
-  playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
+let StartRoomClass = START_ROOM === 2 ? Room2 : Room1;
+
+
+// Nur initialen Raum laden, wenn noch keiner existiert (z.B. nach Cutscene aus Room1 nicht nochmal überschreiben)
+if (!window.__roomAlreadyLoaded) {
+  if (SKIP_CUTSCENE) {
+    currentRoom = switchRoom(StartRoomClass, scene);
+    setColliders(currentRoom.colliders);
     crosshair.style.display = '';
-    currentRoom = switchRoom(Room1, scene);
-    setColliders(currentRoom.colliders); // <--- NEU
-    //activateRoomInteractions();
-  });
+  } else {
+    playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
+      crosshair.style.display = '';
+      currentRoom = switchRoom(StartRoomClass, scene);
+      setColliders(currentRoom.colliders);
+    });
+  }
+  window.__roomAlreadyLoaded = true;
 }
+
 window.setupIngameMenu = setupIngameMenu;

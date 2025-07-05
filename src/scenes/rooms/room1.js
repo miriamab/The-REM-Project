@@ -11,6 +11,10 @@ import { startBloodFountain } from '../../objects/teddy.js';
 import { makeRadioInteractive, makeLampInteractive, makeTVInteractive } from '../../objects/radio.js';
 import { playNarratorClip } from '../../objects/audios.js';
 
+import { setColliders } from '../../controls/FirstPersonControls.js';
+import { playCutsceneAndSwitch, switchRoom } from '../../sceneManager.js';
+import { Room2 } from './room2.js';
+
 export class Room1 extends BaseRoom {
   constructor(scene) {
     super(scene);
@@ -333,23 +337,23 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
 
   } // Ende init
 
-  /**
-   * Diese Methode wird aufgerufen siehe unten, wenn der Raum erfolgreich abgeschlossen wurde.
-   * Hier könnte z. B. eine Tür geöffnet oder ein Rätsel beendet worden sein.
-   * 
-   * 👉 Hier Cutscene + Wechsel zu Raum2 auslösen, z. B.:
-   * playCutsceneAndSwitch('/cutscenes/room1_outro.mp4', () => {
-   *   switchRoom(Room2, this.scene);
-   * });
-   */
+  // Zentraler Callback für den Raumwechsel nach Cutscene
+  switchToRoom2() {
+    const newRoom = switchRoom(Room2, this.scene);
+    if (typeof setColliders === 'function' && newRoom && newRoom.colliders) setColliders(newRoom.colliders);
+  }
+
+  // Wird aufgerufen, wenn Raum 1 abgeschlossen ist
   onSolved() {
-    console.log("🎯 Raum 1 als abgeschlossen markiert – Cutscene oder Raumwechsel hier einbauen.");
-  } // Ende onSolved
+    playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
+      this.switchToRoom2();
+    });
+  }
 
   spawnTeddyAndButton() {
     const loader = new GLTFLoader();
 
-  // Teddy Bär
+    // Teddy Bär
     loader.load('src/objects/models/room_1/stuffed_animal/teddy_bear__low_poly.glb', (gltf) => {
       const teddy = gltf.scene;
       teddy.scale.set(30, 30, 30);
@@ -358,6 +362,19 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
       this.add(teddy);
       this.colliders.push(teddy);
       this.teddyPosition = teddy.position.clone();
+      // Interaktiv: Nach Blut auf Teddy klicken -> Raum 2
+      teddy.traverse(child => {
+        if (child.isMesh) {
+          registerInteractive(child, () => {
+            if (!this.bloodStarted) return;
+            const bloodPool = this.scene.getObjectByName('bloodPool');
+            if (!bloodPool) return;
+            playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
+              this.switchToRoom2();
+            });
+          });
+        }
+      });
     });
 
     // Roter Knopf

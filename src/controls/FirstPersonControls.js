@@ -19,7 +19,8 @@ export function setupFirstPersonControls(camera, renderer) {
     controls.lock();
   });
 
-  const velocity = 5.0;
+  // Geschwindigkeit kann von außen gesetzt werden
+  controls.velocity = 5.0;
   const direction = new THREE.Vector3();
 
   function update() {
@@ -32,7 +33,7 @@ export function setupFirstPersonControls(camera, renderer) {
       direction.normalize();
 
       if (direction.length() > 0) {
-        const moveStep = velocity * 0.016;
+        const moveStep = controls.velocity * 0.016;
 
         // 1. Rechts/Links (X) prüfen
         if (direction.x !== 0) {
