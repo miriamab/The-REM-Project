@@ -252,6 +252,35 @@ this.colliders.push(colliderRightWall);
       this.tvLock = makeTVInteractive(tv, this);
     });
 
+    // Soviet Chair in der Nähe des TVs platzieren
+    loader.load('src/objects/models/soviet_chair.glb', (gltf) => {
+      const chair = gltf.scene;
+      chair.position.set(2, 0.1, 6); 
+      chair.scale.set(0.9, 0.9, 0.9); // Größe ggf. anpassen
+      chair.rotation.y = Math.PI / 3; // leicht zur Raummitte drehen
+      this.add(chair);
+      this.colliders.push(chair);
+    });
+
+    // Tassen
+    loader.load('src/objects/models/room_1/soviet_mug.glb', (gltf) => {
+      const mug = gltf.scene;
+      mug.scale.set(5, 5, 5);
+      mug.position.set(0, 0.1, -6);
+      mug.rotation.y = Math.PI / 2; // zur Wand drehen
+      this.add(mug);
+      this.colliders.push(mug);
+    });
+
+
+  
+    loader.load('src/objects/models/room_1/car/car.glb', (gltf) => {
+      const car = gltf.scene;
+      car.scale.set(0.5, 0.5, 0.5);
+      car.position.set(-6, 0.1, -6);
+      this.add(car);
+      this.colliders.push(car);
+    });
 /** 
     // Blubberblasen Rätsel
   const blubber = createBlubberblasen(this.scene);
@@ -330,6 +359,23 @@ this.add(wallTeddyMesh);
 
 // Referenzen speichern
 this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
+
+    // Kissen-Pack (post-apocalypse_pillow_pack.glb) auf dem Boden platzieren
+    loader.load('src/objects/models/room_1/post-apocalypse_pillow_pack.glb', (gltf) => {
+      const pillowPack = gltf.scene;
+      pillowPack.position.set(5, 0.1, 2); // x, y (leicht über Boden), z – Position ggf. anpassen
+      pillowPack.scale.set(0.3, 0.3, 0.3); // Größe ggf. anpassen
+      pillowPack.rotation.y = 0; // ggf. drehen
+      this.add(pillowPack);
+    });
+
+    // Aschenbecher (ashtray_with_cigarettes.glb) auf dem Boden platzieren
+    loader.load('src/objects/models/room_1/ashtray_with_cigarettes.glb', (gltf) => {
+      const ashtray = gltf.scene;
+      ashtray.position.set(3, 0.15, 6); // Beispiel-Position, leicht über dem Boden
+      ashtray.scale.set(5.2, 5.2, 5.2); // Größe ggf. anpassen
+      this.add(ashtray);
+    });
 
   } // Ende init
 
