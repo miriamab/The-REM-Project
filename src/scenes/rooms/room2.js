@@ -48,24 +48,29 @@ export class Room2 extends BaseRoom {
     scene.fog = new THREE.Fog(0x000000, 20, 150);
     scene.background = new THREE.Color(0x000000);
 
-    // ▶️ QUIZ-TERMINAL (nur Anzeige, keine Interaktion mehr)
-    const terminalGeometry = new THREE.BoxGeometry(10, 8, 0.3);
+    // ▶️ QUIZ-TERMINAL (Box und Titel direkt an der Wand, auf Augenhöhe)
+    // Neue zentrale Position an der Wand
+    const terminalX = 0;
+    const terminalY = 8;
+    const terminalZ = -199.7;
+
+    // Terminal-Box direkt an der Wand
+    const terminalGeometry = new THREE.BoxGeometry(9.5, 7.5, 0.3);
     const terminalMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
     const terminal = new THREE.Mesh(terminalGeometry, terminalMaterial);
-    terminal.position.set(150, 5, -180);
-    terminal.rotation.y = Math.PI;
+    terminal.position.set(terminalX, terminalY, terminalZ);
+    terminal.rotation.y = 0;
     terminal.name = 'quiz_terminal';
     scene.add(terminal);
 
-    // Titel-Box über dem Terminal (dünner, direkt über dem Terminal)
-    const titleBoxGeometry = new THREE.BoxGeometry(10, 1.2, 0.3);
+    // Titel-Box über dem Terminal
+    const titleBoxGeometry = new THREE.BoxGeometry(9.5, 1.2, 0.3);
     const titleBoxMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
     const titleBox = new THREE.Mesh(titleBoxGeometry, titleBoxMaterial);
-    titleBox.position.set(terminal.position.x, terminal.position.y + 5.2, terminal.position.z + 0.18);
-    // Keine Rotation nötig, Box ist wie Terminal
+    titleBox.position.set(terminalX, terminalY + 4.2, terminalZ + 0.01); // leicht vor dem Terminal
     scene.add(titleBox);
 
-    // Titel-Text auf der Box (ohne Spiegelung)
+    // Titel-Text auf der Box
     const fontLoader = new FontLoader();
     fontLoader.load('/fonts/helvetiker_regular.typeface.json', (font) => {
       const textGeo = new TextGeometry('SOMNA Terminal', {
@@ -75,11 +80,57 @@ export class Room2 extends BaseRoom {
       });
       const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const textMesh = new THREE.Mesh(textGeo, textMat);
-      // Mittig auf der Box platzieren
-      textMesh.position.set(titleBox.position.x - 4.1, titleBox.position.y - 0.35, titleBox.position.z + 0.22);
-      // Keine Rotation nötig
+      textMesh.position.set(terminalX - 4.1, terminalY + 4.2 - 0.35, terminalZ + 0.04); // mittig auf der Box
+      textMesh.rotation.y = 0;
       scene.add(textMesh);
     });
+
+    // Quiz-Plane (direkt vor dem Terminal)
+    const quizGeometry = new THREE.PlaneGeometry(9.5, 7.5);
+    const quizCanvas = document.createElement('canvas');
+    quizCanvas.width = 1024;
+    quizCanvas.height = 800;
+    const quizCtx = quizCanvas.getContext('2d');
+    quizCtx.fillStyle = 'rgba(0,0,0,0)';
+    quizCtx.fillRect(0, 0, quizCanvas.width, quizCanvas.height);
+    const quizTexture = new THREE.CanvasTexture(quizCanvas);
+    const quizMaterial = new THREE.MeshBasicMaterial({ map: quizTexture, transparent: true });
+    const quizInterface = new THREE.Mesh(quizGeometry, quizMaterial);
+    quizInterface.position.set(terminalX, terminalY, terminalZ + 0.18); // direkt vor dem Terminal
+    quizInterface.rotation.y = 0;
+    quizInterface.name = 'quiz_interface';
+    scene.add(quizInterface);
+
+    // Funktion zum Rendern des Quiz auf das Canvas
+    function renderQuizOnTerminal(question, answers) {
+      quizCtx.clearRect(0, 0, quizCanvas.width, quizCanvas.height);
+      quizCtx.fillStyle = '#111';
+      quizCtx.fillRect(0, 0, quizCanvas.width, quizCanvas.height);
+      quizCtx.font = 'bold 48px Arial';
+      quizCtx.fillStyle = '#fff';
+      quizCtx.textAlign = 'left';
+      quizCtx.fillText(question, 40, 100);
+      quizCtx.font = 'bold 44px Arial';
+      for (let i = 0; i < answers.length; i++) {
+        quizCtx.fillStyle = '#f44';
+        quizCtx.fillText((i+1) + '. ' + answers[i], 60, 200 + i * 80);
+      }
+      quizTexture.needsUpdate = true;
+      quizMaterial.opacity = 1.0;
+    }
+
+    // Interaktive Hitbox für das Quiz (Raycast auf Plane)
+    registerInteractive(quizInterface, () => {
+      // Beispiel-Frage und Antworten (kann später dynamisch aus quiz_logic.js kommen)
+      renderQuizOnTerminal('Wann haben Sie zuletzt durchgeschlafen?', [
+        'Diese Woche',
+        'Letztes Jahr',
+        'Noch nie'
+      ]);
+      // Optional: startQuiz(scene); // Falls weitere Logik gebraucht wird
+    });
+
+    // (Titel-Box und Text sind jetzt direkt nach der Terminal-Box platziert)
 
     // Buch laden und interaktiv machen (neben das Bett stellen)
     const bookLoader = new GLTFLoader();
