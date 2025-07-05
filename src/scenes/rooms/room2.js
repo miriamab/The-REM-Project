@@ -48,7 +48,7 @@ export class Room2 extends BaseRoom {
     scene.fog = new THREE.Fog(0x000000, 20, 150);
     scene.background = new THREE.Color(0x000000);
 
-    // ▶️ QUIZ-TERMINAL
+    // ▶️ QUIZ-TERMINAL (nur Anzeige, keine Interaktion mehr)
     const terminalGeometry = new THREE.BoxGeometry(10, 8, 0.3);
     const terminalMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
     const terminal = new THREE.Mesh(terminalGeometry, terminalMaterial);
@@ -57,35 +57,47 @@ export class Room2 extends BaseRoom {
     terminal.name = 'quiz_terminal';
     scene.add(terminal);
 
-    // Interaktive Hitbox (unsichtbar)
-    const hitbox = new THREE.Mesh(
-      new THREE.BoxGeometry(10, 8, 0.5),
-      new THREE.MeshBasicMaterial({ visible: false })
-    );
-    hitbox.position.copy(terminal.position);
-    hitbox.rotation.copy(terminal.rotation);
-    hitbox.userData.interactive = true;
+    // Titel-Box über dem Terminal (dünner, direkt über dem Terminal)
+    const titleBoxGeometry = new THREE.BoxGeometry(10, 1.2, 0.3);
+    const titleBoxMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const titleBox = new THREE.Mesh(titleBoxGeometry, titleBoxMaterial);
+    titleBox.position.set(terminal.position.x, terminal.position.y + 5.2, terminal.position.z + 0.18);
+    // Keine Rotation nötig, Box ist wie Terminal
+    scene.add(titleBox);
 
-    registerInteractive(hitbox, () => {
-      console.log("📺 Terminal aktiviert");
-      startQuiz(scene);
-    });
-
-    scene.add(hitbox);
-
-    // Text
+    // Titel-Text auf der Box (ohne Spiegelung)
     const fontLoader = new FontLoader();
     fontLoader.load('/fonts/helvetiker_regular.typeface.json', (font) => {
       const textGeo = new TextGeometry('SOMNA Terminal', {
         font,
-        size: 0.3,
-        height: 0.02,
+        size: 0.55,
+        height: 0.12,
       });
       const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const textMesh = new THREE.Mesh(textGeo, textMat);
-      textMesh.position.set(terminal.position.x, terminal.position.y + 5, terminal.position.z + 0.5);
-      textMesh.rotation.y = Math.PI;
+      // Mittig auf der Box platzieren
+      textMesh.position.set(titleBox.position.x - 4.1, titleBox.position.y - 0.35, titleBox.position.z + 0.22);
+      // Keine Rotation nötig
       scene.add(textMesh);
+    });
+
+    // Buch laden und interaktiv machen (neben das Bett stellen)
+    const bookLoader = new GLTFLoader();
+    bookLoader.load('/hospital_objects/medical-shot.glb', (gltf) => {
+      const book = gltf.scene;
+      book.scale.set(0.3, 0.3, 0.3);
+      book.position.set(170, 7.7, -178); // x etwas größer als Bett, gleiche z
+      book.rotation.y = Math.PI / 2;
+      scene.add(book);
+
+      // Interaktive Hitbox für das Buch
+      book.traverse(child => {
+        if (child.isMesh) {
+          registerInteractive(child, () => {
+            startQuiz(scene);
+          });
+        }
+      });
     });
 
     // Bett
@@ -96,16 +108,6 @@ export class Room2 extends BaseRoom {
       bed.position.set(175, 0, -180);
       bed.rotation.y = Math.PI / 2;
       scene.add(bed);
-    });
-
-     // buch 
-    const bookLoader = new GLTFLoader();
-    bedLoader.load('/book_hospital.glb', (gltf) => {
-      const book = gltf.scene;
-      book.scale.set(0.5, 0.5, 0.5);
-      book.position.set(175, 0, -180);
-      book.rotation.y = Math.PI / 2;
-      scene.add(book);
     });
 
     // Sounds
