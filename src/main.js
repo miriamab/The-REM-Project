@@ -20,7 +20,7 @@ scene.background = new THREE.Color(0x333333);
 const START_ROOM = 1; // 1 = Room1, 2 = Room2
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = false; 
+const SKIP_CUTSCENE = true; 
 
 let currentRoom = null;
 
@@ -110,11 +110,27 @@ if (!window.__roomAlreadyLoaded) {
     currentRoom = switchRoom(StartRoomClass, scene);
     setColliders(currentRoom.colliders);
     crosshair.style.display = '';
+    // Falls wir direkt in Room2 starten, Sounds erst nach User-Klick versuchen zu starten
+    if (currentRoom instanceof Room2) {
+      const tryStartSounds = () => {
+        currentRoom.startRoom2Sounds && currentRoom.startRoom2Sounds();
+        document.removeEventListener('click', tryStartSounds);
+      };
+      document.addEventListener('click', tryStartSounds);
+    }
   } else {
     playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
       crosshair.style.display = '';
       currentRoom = switchRoom(StartRoomClass, scene);
       setColliders(currentRoom.colliders);
+      // Nach Cutscene und Raumwechsel: Room2-Sounds erst nach User-Klick versuchen zu starten
+      if (currentRoom instanceof Room2) {
+        const tryStartSounds = () => {
+          currentRoom.startRoom2Sounds && currentRoom.startRoom2Sounds();
+          document.removeEventListener('click', tryStartSounds);
+        };
+        document.addEventListener('click', tryStartSounds);
+      }
     });
   }
   window.__roomAlreadyLoaded = true;

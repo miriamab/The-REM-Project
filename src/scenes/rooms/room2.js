@@ -9,6 +9,14 @@ import { registerInteractive } from '../../interactions/useRayInteraction.js';
 import { startQuiz } from '../../interactions/quiz_logic.js';
 
 export class Room2 extends BaseRoom {
+  // Hilfsmethode, um Sounds explizit zu starten (kann nach Raumwechsel aufgerufen werden)
+  startRoom2Sounds() {
+    if (this.spookySound && this.atmoSound && this.spookySound.buffer && this.atmoSound.buffer && !this.soundsStarted) {
+      this.spookySound.play();
+      this.atmoSound.play();
+      this.soundsStarted = true;
+    }
+  }
   constructor(scene) {
     super(scene);
     this.colliders = [];
@@ -181,12 +189,9 @@ export class Room2 extends BaseRoom {
       this.atmoSound.setVolume(0.3);
     });
 
+    // Sounds nach User-Interaktion (z.B. Klick) oder explizit nach Raumwechsel starten
     document.addEventListener('click', () => {
-      if (!this.soundsStarted && this.spookySound.buffer && this.atmoSound.buffer) {
-        this.spookySound.play();
-        this.atmoSound.play();
-        this.soundsStarted = true;
-      }
+      this.startRoom2Sounds();
     });
 
     this.flickerLight();
