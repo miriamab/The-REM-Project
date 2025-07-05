@@ -49,6 +49,7 @@ export function startBloodPool(scene, teddyPosition) {
   const geometry = new THREE.CircleGeometry(0.2, 40); // Start-Radius klein
   const material = new THREE.MeshBasicMaterial({ color: 0x5c0707, transparent: true, opacity: 0.7 });
   const bloodPool = new THREE.Mesh(geometry, material);
+  bloodPool.name = "bloodPool"; // <--- Name setzen, damit es gefunden wird
   bloodPool.rotation.x = -Math.PI / 2; // Flach auf den Boden legen
   bloodPool.position.set(teddyPosition.x, 0.011, teddyPosition.z); // Direkt auf dem Boden
 
