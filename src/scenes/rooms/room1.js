@@ -262,15 +262,7 @@ this.colliders.push(colliderRightWall);
       this.colliders.push(chair);
     });
 
-    // Toycar
-    loader.load('src/objects/models/room_1/toy_car.glb', (gltf) => {
-      const toycar = gltf.scene;
-      toycar.scale.set(3, 3, 3);
-      toycar.position.set(-1, 0.36, 4);
-      // zur Wand drehen
-      this.add(toycar);
-      this.colliders.push(toycar);
-    }); 
+
 
     // Tassen
     loader.load('src/objects/models/room_1/soviet_mug.glb', (gltf) => {
@@ -378,6 +370,53 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
       ashtray.scale.set(5.2, 5.2, 5.2); // Größe ggf. anpassen
       this.add(ashtray);
     });
+
+      // Toycar
+    loader.load('src/objects/models/room_1/toy_car.glb', (gltf) => {
+      const toycar = gltf.scene;
+      toycar.scale.set(3, 3, 3);
+      toycar.position.set(-1, 0.36, 4);
+      toycar.rotation.y = Math.PI; // zur Wand drehen
+      this.add(toycar);
+      // Unsichtbarer, klickbarer Cube direkt in die Szene (nicht als Kind!)
+      const boxGeometry = new THREE.BoxGeometry(3, 3, 6); // größer für sicheren Treffer
+      const boxMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
+      const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
+      hitbox.position.set(-1, 1.36, 4); // exakt über dem Toycar
+      this.add(hitbox);
+      let alreadyMoved = false;
+      registerInteractive(hitbox, () => {
+        if (alreadyMoved) return;
+        alreadyMoved = true;
+        const startX = toycar.position.x;
+        const endX = startX - 1.5; // Nach links fahren
+        let start = null;
+        function animateToycar(timestamp) {
+          if (!start) start = timestamp;
+          const progress = Math.min((timestamp - start) / 1000, 1); // 1 Sekunde
+          toycar.position.x = startX + (endX - startX) * progress;
+          if (progress < 1) {
+            requestAnimationFrame(animateToycar);
+          }
+        }
+        requestAnimationFrame(animateToycar);
+      });
+    }); 
+
+
+    // Somna Floor als kleine, um 180° gedrehte Plane GENAU unter das Toycar
+    const somnaFloorTexture = textureLoader.load('assets/images/somna_floor.png');
+    const somnaFloorMaterial = new THREE.MeshBasicMaterial({ map: somnaFloorTexture, transparent: true });
+    const somnaFloorGeometry = new THREE.PlaneGeometry(1.1, 0.4); // halb so groß
+    const somnaFloorMesh = new THREE.Mesh(somnaFloorGeometry, somnaFloorMaterial);
+    // Position exakt wie Toycar, aber auf Bodenhöhe
+    const toycarX = -1, toycarZ = 4;
+    somnaFloorMesh.position.set(toycarX, 0.02, toycarZ);
+    somnaFloorMesh.rotation.x = -Math.PI / 2;
+    somnaFloorMesh.rotation.z = Math.PI; // um 180° drehen
+    this.add(somnaFloorMesh);
+
+   
 
   } // Ende init
 
