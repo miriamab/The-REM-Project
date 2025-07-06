@@ -325,7 +325,7 @@ const wallPaintMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(6, 4),
   new THREE.MeshBasicMaterial({ map: wallPaintTexture, transparent: true })
 );
-wallPaintMesh.position.set(2, 6, 9.7);
+wallPaintMesh.position.set(2, 5, 9.7);
 wallPaintMesh.rotation.y = Math.PI;
 wallPaintMesh.visible = false;
 this.add(wallPaintMesh);
@@ -379,27 +379,28 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
       toycar.rotation.y = Math.PI; // zur Wand drehen
       this.add(toycar);
       // Unsichtbarer, klickbarer Cube direkt in die Szene (nicht als Kind!)
-      const boxGeometry = new THREE.BoxGeometry(3, 3, 6); // größer für sicheren Treffer
+      const boxGeometry = new THREE.BoxGeometry(2, 1, 3); // schmaler und niedriger
       const boxMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
+      boxMaterial.depthWrite = false; // verhindert Z-Buffer-Probleme
       const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
-      hitbox.position.set(-1, 1.36, 4); // exakt über dem Toycar
+      hitbox.position.set(-1, 0.7, 4); // niedriger, näher am Auto
+      hitbox.renderOrder = -1; // immer hinter allem rendern
       this.add(hitbox);
-      let alreadyMoved = false;
+      let moved = false;
       registerInteractive(hitbox, () => {
-        if (alreadyMoved) return;
-        alreadyMoved = true;
-        const startX = toycar.position.x;
-        const endX = startX - 1.5; // Nach links fahren
+        const from = toycar.position.x;
+        const to = moved ? -1 : -2.5;
         let start = null;
         function animateToycar(timestamp) {
           if (!start) start = timestamp;
-          const progress = Math.min((timestamp - start) / 1000, 1); // 1 Sekunde
-          toycar.position.x = startX + (endX - startX) * progress;
+          const progress = Math.min((timestamp - start) / 1000, 1);
+          toycar.position.x = from + (to - from) * progress;
           if (progress < 1) {
             requestAnimationFrame(animateToycar);
           }
         }
         requestAnimationFrame(animateToycar);
+        moved = !moved;
       });
     }); 
 
@@ -409,6 +410,7 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
     const somnaFloorMaterial = new THREE.MeshBasicMaterial({ map: somnaFloorTexture, transparent: true });
     const somnaFloorGeometry = new THREE.PlaneGeometry(1.1, 0.4); // halb so groß
     const somnaFloorMesh = new THREE.Mesh(somnaFloorGeometry, somnaFloorMaterial);
+    somnaFloorMesh.renderOrder = 0; // Wird vor dem Blut gerendert
     // Position exakt wie Toycar, aber auf Bodenhöhe
     const toycarX = -1, toycarZ = 4;
     somnaFloorMesh.position.set(toycarX, 0.02, toycarZ);
