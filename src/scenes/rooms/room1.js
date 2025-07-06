@@ -262,25 +262,27 @@ this.colliders.push(colliderRightWall);
       this.colliders.push(chair);
     });
 
+    // Toycar
+    loader.load('src/objects/models/room_1/toy_car.glb', (gltf) => {
+      const toycar = gltf.scene;
+      toycar.scale.set(3, 3, 3);
+      toycar.position.set(-1, 0.36, 4);
+      // zur Wand drehen
+      this.add(toycar);
+      this.colliders.push(toycar);
+    }); 
+
     // Tassen
     loader.load('src/objects/models/room_1/soviet_mug.glb', (gltf) => {
       const mug = gltf.scene;
-      mug.scale.set(5, 5, 5);
-      mug.position.set(0, 0.1, -6);
+      mug.scale.set(13, 13, 13);
+      mug.position.set(4, 0.1, -7);
       mug.rotation.y = Math.PI / 2; // zur Wand drehen
       this.add(mug);
       this.colliders.push(mug);
     });
 
 
-  
-    loader.load('src/objects/models/room_1/car/car.glb', (gltf) => {
-      const car = gltf.scene;
-      car.scale.set(0.5, 0.5, 0.5);
-      car.position.set(-6, 0.1, -6);
-      this.add(car);
-      this.colliders.push(car);
-    });
 /** 
     // Blubberblasen Rätsel
   const blubber = createBlubberblasen(this.scene);
@@ -331,7 +333,7 @@ const wallPaintMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(6, 4),
   new THREE.MeshBasicMaterial({ map: wallPaintTexture, transparent: true })
 );
-wallPaintMesh.position.set(2, 4, 9.7);
+wallPaintMesh.position.set(2, 6, 9.7);
 wallPaintMesh.rotation.y = Math.PI;
 wallPaintMesh.visible = false;
 this.add(wallPaintMesh);
