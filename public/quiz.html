@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>SOMNA – Fragebogen der Erinnerung</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #f7f7fa;
+      color: #222;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #e9ecf2 0%, #f7f7fa 100%);
+    }
+    .quiz-container {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      padding: 48px 36px 36px 36px;
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .quiz-title {
+      font-size: 1.7rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      color: #1a1a1a;
+      letter-spacing: 0.02em;
+    }
+    .quiz-sub {
+      font-size: 1.1rem;
+      color: #666;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .quiz-question {
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+    .quiz-option {
+      background: #f2f4f8;
+      border: 2px solid #e0e3ea;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 1.08rem;
+      cursor: pointer;
+      transition: background 0.2s, border 0.2s;
+      text-align: left;
+    }
+    .quiz-option.selected {
+      background: #dbeafe;
+      border-color: #3b82f6;
+    }
+    .quiz-option.correct {
+      background: #d1fae5;
+      border-color: #10b981;
+    }
+    .quiz-option.incorrect {
+      background: #fee2e2;
+      border-color: #ef4444;
+    }
+    .quiz-next {
+      margin-top: 12px;
+      padding: 12px 32px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      border: none;
+      background: #3b82f6;
+      color: #fff;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .quiz-next:disabled {
+      background: #b6c6e3;
+      cursor: not-allowed;
+    }
+    .quiz-progress {
+      position: absolute;
+      top: 18px;
+      right: 24px;
+      font-size: 0.98rem;
+      color: #aaa;
+    }
+    .quiz-audio {
+      margin: 18px 0 8px 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    .quiz-hint {
+      font-size: 0.98rem;
+      color: #888;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .quiz-end {
+      font-size: 1.2rem;
+      color: #10b981;
+      margin-top: 24px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz-container">
+    <div class="quiz-title">SOMNA – Programm zur Gedächtnis-Neukalibrierung</div>
+    <div class="quiz-sub">Bitte beantworten Sie den elektronischen Fragebogen, um zur nächsten Phase zugelassen zu werden.</div>
+    <div class="quiz-progress" id="quiz-progress"></div>
+    <div class="quiz-question" id="quiz-question"></div>
+    <div class="quiz-options" id="quiz-options"></div>
+    <div class="quiz-audio" id="quiz-audio" style="display:none;"></div>
+    <div class="quiz-hint" id="quiz-hint"></div>
+    <button class="quiz-next" id="quiz-next" style="display:none;">Weiter</button>
+    <div class="quiz-end" id="quiz-end" style="display:none;"></div>
+  </div>
+  <audio id="audio-hint" src="/assets/audio/2_Getting_warmer.mp3"></audio>
+  <audio id="audio-whisper" src="/assets/audio/4_Theyre_gone.mp3"></audio>
+  <script>
+    // Quiz-Daten
+    const quiz = [
+      {
+        question: 'Wann haben Sie zuletzt durchgeschlafen?',
+        options: ['Diese Woche', 'Letztes Jahr', 'Noch nie'],
+        correct: 2,
+        hint: '',
+        multi: false
+      },
+      {
+        question: 'Welche Symptome erleben Sie regelmäßig?',
+        options: ['Albträume', 'Erinnerungslücken', 'Geräusche im Schlaf'],
+        correct: [0,1,2],
+        hint: 'Hinweis: Höre das Audioprotokoll.',
+        audio: '/assets/audio/2_Getting_warmer.mp3',
+        multi: true
+      },
+      {
+        question: 'Warum sind Sie hier?',
+        options: ['Um zu schlafen', 'Um zu vergessen', 'Um zu heilen'],
+        correct: 1,
+        hint: 'Hinweis: Flüsterton auf dem Lautsprecher.',
+        audio: '/assets/audio/4_Theyre_gone.mp3',
+        multi: false
+      }
+    ];
+    let current = 0;
+    let selected = [];
+    let finished = false;
+    const q = id => document.getElementById(id);
+
+    function renderQuestion() {
+      if (current >= quiz.length) return renderEnd();
+      const qdata = quiz[current];
+      q('quiz-progress').textContent = `Frage ${current+1} / ${quiz.length}`;
+      q('quiz-question').textContent = qdata.question;
+      q('quiz-hint').textContent = qdata.hint || '';
+      q('quiz-end').style.display = 'none';
+      // Audio
+      if (qdata.audio) {
+        q('quiz-audio').style.display = '';
+        q('quiz-audio').innerHTML = `<button id='play-audio' style='padding:8px 18px; border-radius:6px; border:none; background:#e0e7ef; color:#222; cursor:pointer;'>Audioprotokoll abspielen</button>`;
+        document.getElementById('play-audio').onclick = () => {
+          const audio = new Audio(qdata.audio);
+          audio.play();
+        };
+      } else {
+        q('quiz-audio').style.display = 'none';
+      }
+      // Optionen
+      q('quiz-options').innerHTML = '';
+      selected = qdata.multi ? [] : null;
+      qdata.options.forEach((opt, i) => {
+        const btn = document.createElement('div');
+        btn.className = 'quiz-option';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (finished) return;
+          if (qdata.multi) {
+            if (selected.includes(i)) {
+              selected = selected.filter(x => x !== i);
+              btn.classList.remove('selected');
+            } else {
+              selected.push(i);
+              btn.classList.add('selected');
+            }
+            q('quiz-next').disabled = selected.length === 0;
+          } else {
+            selected = i;
+            Array.from(document.getElementsByClassName('quiz-option')).forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            q('quiz-next').disabled = false;
+          }
+        };
+        q('quiz-options').appendChild(btn);
+      });
+      // Weiter-Button
+      q('quiz-next').style.display = '';
+      q('quiz-next').disabled = true;
+      q('quiz-next').onclick = checkAnswer;
+    }
+
+    function checkAnswer() {
+      const qdata = quiz[current];
+      let correct = false;
+      if (qdata.multi) {
+        correct = Array.isArray(selected) && selected.length === qdata.correct.length && selected.every(i => qdata.correct.includes(i));
+      } else {
+        correct = selected === qdata.correct;
+      }
+      // Feedback
+      Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
+        if (qdata.multi) {
+          if (qdata.correct.includes(i)) btn.classList.add('correct');
+          else if (selected.includes(i)) btn.classList.add('incorrect');
+        } else {
+          if (i === qdata.correct) btn.classList.add('correct');
+          else if (i === selected) btn.classList.add('incorrect');
+        }
+        btn.onclick = null;
+      });
+      q('quiz-next').disabled = true;
+      setTimeout(() => {
+        current++;
+        renderQuestion();
+      }, 1200);
+    }
+
+    function renderEnd() {
+      finished = true;
+      q('quiz-question').textContent = '';
+      q('quiz-options').innerHTML = '';
+      q('quiz-hint').textContent = '';
+      q('quiz-audio').style.display = 'none';
+      q('quiz-next').style.display = 'none';
+      q('quiz-progress').textContent = '';
+      q('quiz-end').style.display = '';
+      q('quiz-end').textContent = 'Vielen Dank! Sie werden zur nächsten Phase weitergeleitet.';
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2500);
+    }
+
+    renderQuestion();
+  </script>
+</body>
+</html>

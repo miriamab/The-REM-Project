@@ -9,6 +9,7 @@ import { registerInteractive } from '../../interactions/useRayInteraction.js';
 import { startQuiz } from '../../interactions/quiz_logic.js';
 
 export class Room2 extends BaseRoom {
+  // Entfernt: Quiz-bezogene Properties, da Quiz jetzt extern ist
   // Hilfsmethode, um Sounds explizit zu starten (kann nach Raumwechsel aufgerufen werden)
   startRoom2Sounds() {
     if (this.spookySound && this.atmoSound && this.spookySound.buffer && this.atmoSound.buffer && !this.soundsStarted) {
@@ -21,6 +22,7 @@ export class Room2 extends BaseRoom {
     super(scene);
     this.colliders = [];
     this.soundsStarted = false;
+    this._quizShowRequested = false; // Merker, falls Spritze vor Terminal geladen wird
   }
 
   init() {
@@ -56,29 +58,44 @@ export class Room2 extends BaseRoom {
     scene.fog = new THREE.Fog(0x000000, 20, 150);
     scene.background = new THREE.Color(0x000000);
 
-    // ▶️ QUIZ-TERMINAL (Box und Titel direkt an der Wand, auf Augenhöhe)
-    // Neue zentrale Position an der Wand
+
+    // 3D-Terminal-Modell als reine Deko laden (ohne Quiz-Plane/Interaktion)
     const terminalX = 0;
-    const terminalY = 8;
+    const terminalY = 0;
     const terminalZ = -199.7;
+    const terminalLoader = new GLTFLoader();
+    terminalLoader.load('/terminal.glb', (gltf) => {
+      const terminalModel = gltf.scene;
+      terminalModel.scale.set(0.10, 0.10, 0.10);
+      terminalModel.position.set(150, 0, -178);
+      terminalModel.rotation.y = Math.PI / 2;
+      terminalModel.name = 'quiz_terminal_model';
+      terminalModel.traverse(obj => {
+        if (obj.isMesh) {
+          obj.visible = true;
+        }
+      });
+      scene.add(terminalModel);
+      // Interaktion: Klick auf einen beliebigen Mesh im Terminal öffnet das Quiz
+      terminalModel.traverse(obj => {
+        if (obj.isMesh) {
+          registerInteractive(obj, () => {
+            console.log('Terminal wurde geklickt! Quiz wird geöffnet...');
+            window.location.href = '/quiz.html';
+          });
+        }
+      });
+    }, undefined, (err) => {
+      console.warn('computer_terminal.glb konnte nicht geladen werden:', err);
+    });
 
-    // Terminal-Box direkt an der Wand
-    const terminalGeometry = new THREE.BoxGeometry(9.5, 7.5, 0.3);
-    const terminalMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const terminal = new THREE.Mesh(terminalGeometry, terminalMaterial);
-    terminal.position.set(terminalX, terminalY, terminalZ);
-    terminal.rotation.y = 0;
-    terminal.name = 'quiz_terminal';
-    scene.add(terminal);
-
-    // Titel-Box über dem Terminal
+    // Titel-Box und Text wie gehabt (optional, kann entfernt werden)
     const titleBoxGeometry = new THREE.BoxGeometry(9.5, 1.2, 0.3);
     const titleBoxMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
     const titleBox = new THREE.Mesh(titleBoxGeometry, titleBoxMaterial);
-    titleBox.position.set(terminalX, terminalY + 4.2, terminalZ + 0.01); // leicht vor dem Terminal
+    titleBox.position.set(terminalX, terminalY + 6.2, terminalZ + 0.01);
     scene.add(titleBox);
 
-    // Titel-Text auf der Box
     const fontLoader = new FontLoader();
     fontLoader.load('/fonts/helvetiker_regular.typeface.json', (font) => {
       const textGeo = new TextGeometry('SOMNA Terminal', {
@@ -88,76 +105,28 @@ export class Room2 extends BaseRoom {
       });
       const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const textMesh = new THREE.Mesh(textGeo, textMat);
-      textMesh.position.set(terminalX - 4.1, terminalY + 4.2 - 0.35, terminalZ + 0.04); // mittig auf der Box
+      textMesh.position.set(terminalX - 4.1, terminalY + 4.2 - 0.35, terminalZ + 0.04);
       textMesh.rotation.y = 0;
       scene.add(textMesh);
     });
 
-    // Quiz-Plane (direkt vor dem Terminal)
-    const quizGeometry = new THREE.PlaneGeometry(9.5, 7.5);
-    const quizCanvas = document.createElement('canvas');
-    quizCanvas.width = 1024;
-    quizCanvas.height = 800;
-    const quizCtx = quizCanvas.getContext('2d');
-    quizCtx.fillStyle = 'rgba(0,0,0,0)';
-    quizCtx.fillRect(0, 0, quizCanvas.width, quizCanvas.height);
-    const quizTexture = new THREE.CanvasTexture(quizCanvas);
-    const quizMaterial = new THREE.MeshBasicMaterial({ map: quizTexture, transparent: true });
-    const quizInterface = new THREE.Mesh(quizGeometry, quizMaterial);
-    quizInterface.position.set(terminalX, terminalY, terminalZ + 0.18); // direkt vor dem Terminal
-    quizInterface.rotation.y = 0;
-    quizInterface.name = 'quiz_interface';
-    scene.add(quizInterface);
-
-    // Funktion zum Rendern des Quiz auf das Canvas
-    function renderQuizOnTerminal(question, answers) {
-      quizCtx.clearRect(0, 0, quizCanvas.width, quizCanvas.height);
-      quizCtx.fillStyle = '#111';
-      quizCtx.fillRect(0, 0, quizCanvas.width, quizCanvas.height);
-      quizCtx.font = 'bold 48px Arial';
-      quizCtx.fillStyle = '#fff';
-      quizCtx.textAlign = 'left';
-      quizCtx.fillText(question, 40, 100);
-      quizCtx.font = 'bold 44px Arial';
-      for (let i = 0; i < answers.length; i++) {
-        quizCtx.fillStyle = '#f44';
-        quizCtx.fillText((i+1) + '. ' + answers[i], 60, 200 + i * 80);
-      }
-      quizTexture.needsUpdate = true;
-      quizMaterial.opacity = 1.0;
-    }
-
-    // Interaktive Hitbox für das Quiz (Raycast auf Plane)
-    registerInteractive(quizInterface, () => {
-      // Beispiel-Frage und Antworten (kann später dynamisch aus quiz_logic.js kommen)
-      renderQuizOnTerminal('Wann haben Sie zuletzt durchgeschlafen?', [
-        'Diese Woche',
-        'Letztes Jahr',
-        'Noch nie'
-      ]);
-      // Optional: startQuiz(scene); // Falls weitere Logik gebraucht wird
-    });
-
-    // (Titel-Box und Text sind jetzt direkt nach der Terminal-Box platziert)
-
-    // Buch laden und interaktiv machen (neben das Bett stellen)
+    // ...existing code...
     const bookLoader = new GLTFLoader();
     bookLoader.load('/hospital_objects/medical-shot.glb', (gltf) => {
-      const book = gltf.scene;
-      book.scale.set(0.3, 0.3, 0.3);
-      book.position.set(170, 7.7, -178); // x etwas größer als Bett, gleiche z
-      book.rotation.y = Math.PI / 2;
-      scene.add(book);
-
-      // Interaktive Hitbox für das Buch
-      book.traverse(child => {
-        if (child.isMesh) {
-          registerInteractive(child, () => {
-            startQuiz(scene);
-          });
-        }
+      const syringe = gltf.scene;
+      syringe.scale.set(0.3, 0.3, 0.3);
+      syringe.position.set(170, 7.7, -178);
+      syringe.rotation.y = Math.PI / 2;
+      syringe.name = 'quiz_syringe';
+      // Ursprüngliches Material der Spritze beibehalten (keine pinke Farbe mehr)
+      scene.add(syringe);
+      // Interaktion: Klick auf die Spritze öffnet die Quiz-Seite und loggt in die Konsole
+      registerInteractive(syringe, () => {
+        console.log('Spritze wurde geklickt! Quiz wird geöffnet...');
+        window.location.href = '/quiz.html';
       });
     });
+    // Fallback-Button wird entfernt (nicht mehr benötigt)
 
     // Bett
     const bedLoader = new GLTFLoader();
@@ -180,13 +149,13 @@ export class Room2 extends BaseRoom {
     audioLoader.load('sounds/scary-hospital.mp3', (buffer) => {
       this.spookySound.setBuffer(buffer);
       this.spookySound.setLoop(true);
-      this.spookySound.setVolume(0.2);
+      this.spookySound.setVolume(0.1);
     });
 
     audioLoader.load('sounds/hospital-food-cart-wheeled-79068.mp3', (buffer) => {
       this.atmoSound.setBuffer(buffer);
       this.atmoSound.setLoop(true);
-      this.atmoSound.setVolume(0.3);
+      this.atmoSound.setVolume(0.1);
     });
 
     // Sounds nach User-Interaktion (z.B. Klick) oder explizit nach Raumwechsel starten
@@ -258,4 +227,6 @@ export class Room2 extends BaseRoom {
     };
     flicker();
   }
+
+  // ...existing code...
 }

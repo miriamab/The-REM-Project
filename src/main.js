@@ -17,7 +17,7 @@ import { Room2 } from './scenes/rooms/room2.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
-const START_ROOM = 1; // 1 = Room1, 2 = Room2
+const START_ROOM = 2; // 1 = Room1, 2 = Room2
 
 // Skip Video (true) oder Video abspielen (false)
 const SKIP_CUTSCENE = true; 
