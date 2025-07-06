@@ -142,7 +142,8 @@
         options: ['Diese Woche', 'Letztes Jahr', 'Noch nie'],
         correct: 2,
         hint: '',
-        multi: false
+        multi: false,
+        wrongSound: '/assets/audio/are_you_sure.mp3'
       },
       {
         question: 'Welche Symptome erleben Sie regelmäßig?',
@@ -156,9 +157,10 @@
         question: 'Warum sind Sie hier?',
         options: ['Um zu schlafen', 'Um zu vergessen', 'Um zu heilen'],
         correct: 1,
-        hint: 'Hinweis: Flüsterton auf dem Lautsprecher.',
-        audio: '/assets/audio/4_Theyre_gone.mp3',
-        multi: false
+        //hint: 'Hinweis: Flüsterton auf dem Lautsprecher.',
+        //audio: '/assets/audio/4_Theyre_gone.mp3',
+        multi: false,
+        wrongSound: '/assets/audio/you_wanted_to_forget.mp3'
       }
     ];
     let current = 0;
@@ -226,13 +228,40 @@
         correct = selected === qdata.correct;
       }
       // Feedback
+      let wrongSoundPlayed = false;
+      let rightSoundPlayed = false;
       Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
         if (qdata.multi) {
-          if (qdata.correct.includes(i)) btn.classList.add('correct');
-          else if (selected.includes(i)) btn.classList.add('incorrect');
+          if (qdata.correct.includes(i)) {
+            btn.classList.add('correct');
+            // Sound für richtige Antwort (nur einmal abspielen)
+            if (!rightSoundPlayed && Array.isArray(selected) && selected.length === qdata.correct.length && selected.every(idx => qdata.correct.includes(idx))) {
+              const audio = new Audio('/assets/audio/electric-chimes.mp3');
+              audio.play();
+              rightSoundPlayed = true;
+            }
+          } else if (selected.includes(i)) {
+            btn.classList.add('incorrect');
+          }
         } else {
-          if (i === qdata.correct) btn.classList.add('correct');
-          else if (i === selected) btn.classList.add('incorrect');
+          if (i === qdata.correct) {
+            btn.classList.add('correct');
+            // Sound für richtige Antwort (nur einmal abspielen)
+            if (!rightSoundPlayed && selected === qdata.correct) {
+              const audio = new Audio('/assets/audio/electric-chimes.mp3');
+              audio.play();
+              rightSoundPlayed = true;
+            }
+          } else if (i === selected) {
+            btn.classList.add('incorrect');
+            // Sound nur bei Single-Choice und falscher Antwort
+            if (!wrongSoundPlayed && selected !== qdata.correct) {
+              const wrongSound = qdata.wrongSound || '/assets/audio/wrong_answer.mp3';
+              const audio = new Audio(wrongSound);
+              audio.play();
+              wrongSoundPlayed = true;
+            }
+          }
         }
         btn.onclick = null;
       });
