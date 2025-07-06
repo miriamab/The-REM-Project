@@ -134,6 +134,8 @@
   </div>
   <audio id="audio-hint" src="/assets/audio/2_Getting_warmer.mp3"></audio>
   <audio id="audio-whisper" src="/assets/audio/4_Theyre_gone.mp3"></audio>
+  <audio id="quiz-bg" src="/assets/audio/pad_quiz_timetoanswer.wav" loop></audio>
+  <audio id="quiz-activated" src="/assets/audio/quiz_activatd.mp3"></audio>
   <script>
     // Quiz-Daten
     const quiz = [
@@ -141,7 +143,8 @@
         question: 'Wann haben Sie zuletzt durchgeschlafen?',
         options: ['Diese Woche', 'Letztes Jahr', 'Noch nie'],
         correct: 2,
-        hint: '',
+        audio: '/assets/audio/memories_lie.mp3',
+        hint: 'Secret Hint',
         multi: false,
         wrongSound: '/assets/audio/are_you_sure.mp3'
       },
@@ -149,16 +152,16 @@
         question: 'Welche Symptome erleben Sie regelmäßig?',
         options: ['Albträume', 'Erinnerungslücken', 'Geräusche im Schlaf'],
         correct: [0,1,2],
-        hint: 'Hinweis: Höre das Audioprotokoll.',
-        audio: '/assets/audio/2_Getting_warmer.mp3',
+        audio: '/assets/audio/things_unremembered.mp3',
+        hint: 'Secret Hint',
         multi: true
       },
       {
         question: 'Warum sind Sie hier?',
         options: ['Um zu schlafen', 'Um zu vergessen', 'Um zu heilen'],
         correct: 1,
-        //hint: 'Hinweis: Flüsterton auf dem Lautsprecher.',
-        //audio: '/assets/audio/4_Theyre_gone.mp3',
+        audio: '/assets/audio/sleep_access.mp3',
+        hint: 'Secret Hint',
         multi: false,
         wrongSound: '/assets/audio/you_wanted_to_forget.mp3'
       }
@@ -181,6 +184,7 @@
         q('quiz-audio').innerHTML = `<button id='play-audio' style='padding:8px 18px; border-radius:6px; border:none; background:#e0e7ef; color:#222; cursor:pointer;'>Audioprotokoll abspielen</button>`;
         document.getElementById('play-audio').onclick = () => {
           const audio = new Audio(qdata.audio);
+          audio.volume = 0.9; // Lautstärke für Hinweis-/Audioprotokoll-Sound
           audio.play();
         };
       } else {
@@ -219,6 +223,7 @@
       q('quiz-next').onclick = checkAnswer;
     }
 
+    let secondChance = false;
     function checkAnswer() {
       const qdata = quiz[current];
       let correct = false;
@@ -230,13 +235,45 @@
       // Feedback
       let wrongSoundPlayed = false;
       let rightSoundPlayed = false;
+      let wasWrong = false;
+      // Wenn zweite Chance aktiv ist, dann jetzt erst Lösung zeigen
+      if (!qdata.multi && secondChance) {
+        let wasSecondWrong = selected !== qdata.correct;
+        Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
+          if (i === qdata.correct) {
+            btn.classList.add('correct');
+            if (!rightSoundPlayed && selected === qdata.correct) {
+              const audio = new Audio('/assets/audio/electric-chimes.wav');
+              audio.volume = 0.2;
+              audio.play();
+              rightSoundPlayed = true;
+            }
+          } else if (i === selected) {
+            btn.classList.add('incorrect');
+          }
+          btn.onclick = null;
+        });
+        if (wasSecondWrong) {
+          const audio = new Audio('/assets/audio/wrong_answer.mp3');
+          audio.volume = 0.5;
+          audio.play();
+        }
+        q('quiz-next').disabled = true;
+        secondChance = false;
+        setTimeout(() => {
+          current++;
+          selected = [];
+          renderQuestion();
+        }, 3000);
+        return;
+      }
       Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
         if (qdata.multi) {
           if (qdata.correct.includes(i)) {
             btn.classList.add('correct');
-            // Sound für richtige Antwort (nur einmal abspielen)
             if (!rightSoundPlayed && Array.isArray(selected) && selected.length === qdata.correct.length && selected.every(idx => qdata.correct.includes(idx))) {
-              const audio = new Audio('/assets/audio/electric-chimes.mp3');
+              const audio = new Audio('/assets/audio/electric-chimes.wav'); // Optional: Hier kannst du auch einen anderen Sound nehmen
+              audio.volume = 0.2; // Lautstärke für richtigen Antwort-Sound
               audio.play();
               rightSoundPlayed = true;
             }
@@ -245,35 +282,76 @@
           }
         } else {
           if (i === qdata.correct) {
-            btn.classList.add('correct');
-            // Sound für richtige Antwort (nur einmal abspielen)
-            if (!rightSoundPlayed && selected === qdata.correct) {
-              const audio = new Audio('/assets/audio/electric-chimes.mp3');
-              audio.play();
-              rightSoundPlayed = true;
-            }
+            // Noch nicht grün markieren, erst nach zweitem Versuch
           } else if (i === selected) {
             btn.classList.add('incorrect');
-            // Sound nur bei Single-Choice und falscher Antwort
             if (!wrongSoundPlayed && selected !== qdata.correct) {
               const wrongSound = qdata.wrongSound || '/assets/audio/wrong_answer.mp3';
               const audio = new Audio(wrongSound);
+              audio.volume = 0.6; // Lautstärke für falsche Antwort
               audio.play();
               wrongSoundPlayed = true;
+              wasWrong = true;
             }
           }
         }
         btn.onclick = null;
       });
       q('quiz-next').disabled = true;
-      setTimeout(() => {
-        current++;
-        renderQuestion();
-      }, 1200);
+      // Zweite Chance bei falscher Antwort (nur bei Single-Choice)
+      if (!qdata.multi && wasWrong && !secondChance) {
+        secondChance = true;
+        setTimeout(() => {
+          // Optionen zurücksetzen
+          Array.from(document.getElementsByClassName('quiz-option')).forEach((btn) => {
+            btn.classList.remove('incorrect', 'selected');
+            btn.onclick = () => {
+              if (finished) return;
+              selected = Array.prototype.indexOf.call(btn.parentNode.children, btn);
+              Array.from(document.getElementsByClassName('quiz-option')).forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected');
+              q('quiz-next').disabled = false;
+            };
+          });
+          q('quiz-next').disabled = true;
+        }, 1200);
+        return;
+      }
+      // Bei richtiger Antwort oder nach zweitem Versuch Lösung zeigen
+      if (!qdata.multi && !wasWrong && !secondChance) {
+        // Richtige Antwort beim ersten Versuch
+        Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
+          if (i === qdata.correct) {
+            btn.classList.add('correct');
+            if (!rightSoundPlayed && selected === qdata.correct) {
+              const audio = new Audio('/assets/audio/electric-chimes.wav'); // Optional: Hier kannst du auch einen anderen Sound nehmen
+              audio.play();
+              rightSoundPlayed = true;
+            }
+          }
+          btn.onclick = null;
+        });
+        q('quiz-next').disabled = true;
+        setTimeout(() => {
+          current++;
+          selected = [];
+          renderQuestion();
+        }, 3000);
+        return;
+      }
+      // Multiple-Choice oder andere Fälle
+      if (qdata.multi) {
+        setTimeout(() => {
+          current++;
+          selected = [];
+          renderQuestion();
+        }, 3000);
+      }
     }
 
     function renderEnd() {
       finished = true;
+      stopQuizBg(); // Hintergrundsound stoppen
       q('quiz-question').textContent = '';
       q('quiz-options').innerHTML = '';
       q('quiz-hint').textContent = '';
@@ -287,6 +365,44 @@
       }, 2500);
     }
 
+    // Quiz-Hintergrundsound abspielen, sobald Seite geladen wird (mit User-Interaktion für Autoplay)
+    function playQuizBg() {
+      const bg = document.getElementById('quiz-bg');
+      if (bg) {
+        bg.volume = 0.1;
+        bg.currentTime = 0;
+        bg.play().catch(() => {});
+      }
+    }
+
+    // Versuche direkt zu starten, und als Fallback bei erstem User-Klick
+    window.addEventListener('DOMContentLoaded', () => {
+      playQuizBg();
+      document.body.addEventListener('pointerdown', playQuizBg, { once: true });
+    });
+
+    // quiz_activatd.mp3 kann weiterhin über window.startQuizBgSound() gestartet werden, aber ist nicht mehr Standard
+    function playQuizActivatedAndThenBg() {
+      const activated = document.getElementById('quiz-activated');
+      if (activated) {
+        activated.currentTime = 0;
+        activated.play().catch(() => {});
+      }
+    }
+    function stopQuizBg() {
+      const bg = document.getElementById('quiz-bg');
+      if (bg && !bg.paused) {
+        bg.pause();
+        bg.currentTime = 0;
+      }
+    }
+    // Quiz-Hintergrundsound erst nach quiz_activatd abspielen, wenn ?startbg=1 in der URL
+// Soundstart explizit über externen Aufruf (z.B. Raycast aus 3D-Engine)
+window.startQuizBgSound = playQuizActivatedAndThenBg;
+// Debug: Logge Soundstart
+console.log('window.startQuizBgSound ist bereit.');
+// Test: Soundstart bei erstem Klick auf die Seite (nur für Debug, kann wieder entfernt werden)
+// document.body.addEventListener('click', window.startQuizBgSound, { once: true });
     renderQuestion();
   </script>
 </body>

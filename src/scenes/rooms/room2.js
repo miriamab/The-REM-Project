@@ -81,9 +81,14 @@ export class Room2 extends BaseRoom {
         if (obj.isMesh) {
           registerInteractive(obj, () => {
             console.log('Terminal wurde geklickt! Quiz wird geöffnet...');
-            window.location.href = '/quiz.html';
+            // Erst Sound abspielen, dann Quiz öffnen
+            const audio = new Audio('/assets/audio/quiz_activatd.mp3');
+            audio.play().catch(() => {});
+            setTimeout(() => {
+              window.location.href = '/quiz.html';
+            }, 6000); // Sound wird abgepielt, bevor das Quiz geöffnet wird bzw. erscheint
           });
-        }
+        } 
       });
     }, undefined, (err) => {
       console.warn('computer_terminal.glb konnte nicht geladen werden:', err);
@@ -110,7 +115,7 @@ export class Room2 extends BaseRoom {
       scene.add(textMesh);
     });
 
-    // ...existing code...
+    // Spritze (Quiz-Interaktion)
     const bookLoader = new GLTFLoader();
     bookLoader.load('/hospital_objects/medical-shot.glb', (gltf) => {
       const syringe = gltf.scene;
