@@ -72,7 +72,8 @@ export class Room2 extends BaseRoom {
 
         // --- Weitere medizinische Objekte platzieren ---
         const gltfObjects = [
-          { file: '/hospital_objects/bottles_medical.glb', pos: [140, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
+          { file: '/hospital_objects/bottles_medical.glb', pos: [120, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
+          { file: '/hospital_objects/squid.glb', pos: [90, 10, -135], scale: [19,19,19], rot: [0, 0, 0] },
           { file: '/hospital_objects/hospital_asset.glb', pos: [160, 9.3, -192], scale: [0.01,0.01,0.01], rot: [0, -Math.PI/2, 0] },
           { file: '/hospital_objects/wheelchair.glb', pos: [168, -6.5, -130], scale: [0.60,0.60,0.60], rot: [0, Math.PI, 0] }
         ];
