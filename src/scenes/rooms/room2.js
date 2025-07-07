@@ -26,6 +26,51 @@ export class Room2 extends BaseRoom {
   }
 
   init() {
+    // --- Clipboard-Objekt laden und Interaktion ---
+    this.clipboardFound = false;
+    const clipboardLoader = new GLTFLoader();
+    clipboardLoader.load(
+      '/hospital_objects/document_clipboard.glb',
+      (gltf) => {
+        const clipboard = gltf.scene;
+        clipboard.name = 'document_clipboard';
+        // Extrem groß und deutlich über dem Bett schweben lassen (Debug)
+        clipboard.position.set(125, 8.9, -164); // X/Y/Z wie Bett, Y deutlich höher
+        clipboard.scale.set(15, 15, 15);
+        clipboard.rotation.set(Math.PI / 11, 0, 0); // 30° nach vorne geneigt
+        // Auffälliges Material für Sichtbarkeit
+        clipboard.traverse(obj => {
+          if (obj.isMesh) {
+            obj.visible = true;
+            // Originalmaterial aus GLB bleibt erhalten
+          }
+        });
+        console.log('DEBUG: Clipboard SCHWEBT über Bett:', clipboard.position);
+        this.scene.add(clipboard);
+        // Debug: Modellhierarchie loggen
+        console.log('DEBUG: Clipboard children:', clipboard.children);
+        // Interaktion: Klick auf Clipboard
+        clipboard.traverse(obj => {
+          if (obj.isMesh) {
+            registerInteractive(obj, () => {
+              if (this.clipboardFound) return;
+              this.clipboardFound = true;
+              // Sound abspielen
+              const audio = new Audio('/assets/audio/signed_documents.mp3');
+              audio.play();
+              // Objekt aus Szene entfernen
+              this.scene.remove(clipboard);
+              // Terminal erst jetzt aktivierbar machen
+              this.terminalEnabled = true;
+            });
+          }
+        });
+      },
+      undefined,
+      (err) => {
+        console.error('FEHLER: document_clipboard.glb konnte nicht geladen werden:', err);
+      }
+    );
     const scene = this.scene;
 
     // Bewegungsgeschwindigkeit NUR für Raum 2 setzen
@@ -59,16 +104,16 @@ export class Room2 extends BaseRoom {
     scene.background = new THREE.Color(0x000000);
 
 
-    // 3D-Terminal-Modell als reine Deko laden (ohne Quiz-Plane/Interaktion)
+    // 3D-Terminal-Modell laden, aber Interaktion erst nach Clipboard-Fund aktivieren
     const terminalX = 0;
     const terminalY = 0;
     const terminalZ = -199.7;
     const terminalLoader = new GLTFLoader();
     terminalLoader.load('/terminal.glb', (gltf) => {
       const terminalModel = gltf.scene;
-      terminalModel.scale.set(0.10, 0.10, 0.10);
-      terminalModel.position.set(150, 0, -178);
-      terminalModel.rotation.y = Math.PI / 2;
+      terminalModel.scale.set(0.16, 0.16, 0.16);
+      terminalModel.position.set(110, 0, -182);
+      terminalModel.rotation.y = -Math.PI / 2;
       terminalModel.name = 'quiz_terminal_model';
       terminalModel.traverse(obj => {
         if (obj.isMesh) {
@@ -76,19 +121,19 @@ export class Room2 extends BaseRoom {
         }
       });
       scene.add(terminalModel);
-      // Interaktion: Klick auf einen beliebigen Mesh im Terminal öffnet das Quiz
+      // Interaktion: Klick auf Terminal NUR wenn clipboard gefunden
       terminalModel.traverse(obj => {
         if (obj.isMesh) {
           registerInteractive(obj, () => {
+            if (!this.terminalEnabled) return; // Erst nach Clipboard-Fund
             console.log('Terminal wurde geklickt! Quiz wird geöffnet...');
-            // Erst Sound abspielen, dann Quiz öffnen
             const audio = new Audio('/assets/audio/quiz_activatd.mp3');
             audio.play().catch(() => {});
             setTimeout(() => {
               window.location.href = '/quiz.html';
-            }, 6000); // Sound wird abgepielt, bevor das Quiz geöffnet wird bzw. erscheint
+            }, 6000);
           });
-        } 
+        }
       });
     }, undefined, (err) => {
       console.warn('computer_terminal.glb konnte nicht geladen werden:', err);
