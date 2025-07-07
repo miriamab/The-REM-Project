@@ -186,6 +186,46 @@ export class Room2 extends BaseRoom {
     // Stellen wir sicher, dass diese Box nicht mit anderen Objekten interagiert
     fallTriggerWall.userData.ignoreRaycast = true; 
 
+    // Blood Door in der Nähe des Backpacks einfügen (blood_door.glb)
+    const bloodDoorLoader = new GLTFLoader();
+    bloodDoorLoader.load('/prison_door.glb', (gltf) => {
+      const bloodDoor = gltf.scene;
+      bloodDoor.name = 'prison_door';
+      // Position nahe des Rucksacks (backpack ist bei 110, 10, 119)
+      bloodDoor.position.set(33, 0, 89); // Tiefer positioniert, damit der Boden nicht sichtbar ist
+      // Größe und Rotation anpassen
+      bloodDoor.scale.set(10, 10, 10); // Skalierung je nach Modellgröße anpassen
+      bloodDoor.rotation.set(0, 0, 0); // Keine Rotation, Tür ist seitlich zu sehen
+      
+      // Tür sichtbar machen, aber Boden ausblenden
+      bloodDoor.traverse(obj => {
+        if (obj.isMesh) {
+          obj.visible = true;
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          
+          // Wenn es sich um den Boden der Tür handelt, Textur transparent machen
+          if (obj.name.includes('floor') || obj.name.includes('boden') || 
+              (obj.position.y < -0.5 && obj.position.y > -2)) {
+            // Boden unsichtbar machen
+            obj.visible = false;
+          }
+          
+          // Keine Interaktion mit der Tür mehr
+        }
+      });
+      
+      // Rotes Licht an der Tür für dramatischen Effekt
+      const doorLight = new THREE.PointLight(0xff0000, 2, 20);
+      doorLight.position.set(bloodDoor.position.x, bloodDoor.position.y + 10, bloodDoor.position.z);
+      scene.add(doorLight);
+      
+      scene.add(bloodDoor);
+      console.log("Blood Door platziert bei:", bloodDoor.position);
+    }, undefined, (err) => {
+      console.error("FEHLER beim Laden von prison_door.glb:", err);
+    });
+
     // Licht
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambient);
@@ -473,6 +513,10 @@ export class Room2 extends BaseRoom {
             
             // In Blickrichtung schauen (leicht nach vorne)
             this.scene.camera.lookAt(currentPos.x, 10, currentPos.z - 10);
+            
+            // Blau-türkisen Nebel um den Spieler herum erzeugen
+            console.log("Erzeuge blau-türkisen Nebel nach dem Fall...");
+            this.createBlueFog(currentPos, 4, 20000); // Intensität 4, Dauer 20 Sekunden
           }
           
           // Rotation zurücksetzen für normale Ansicht
@@ -495,6 +539,99 @@ export class Room2 extends BaseRoom {
     
     // Animation starten
     fallAnimation();
+  }
+
+  // Blauen/türkisen Nebel um den Spieler herum erzeugen
+  createBlueFog(position, intensity = 5, duration = 15000) {
+    const scene = this.scene;
+    if (!scene) return;
+    
+    // Erstelle ein Partikelsystem für den Nebel
+    const particleCount = 1000;
+    const particles = new THREE.BufferGeometry();
+    
+    // Arrays für Partikel-Positionen und Farben
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    
+    // Nebel um die angegebene Position herum erzeugen (typischerweise Spielerposition)
+    const radius = 30; // Radius des Nebels
+    
+    // Für jeden Partikel
+    for (let i = 0; i < particleCount; i++) {
+      // Zufällige Position im Bereich um den Spieler
+      const x = position.x + (Math.random() * 2 - 1) * radius;
+      const y = position.y + (Math.random() * 2 - 1) * 10; // Flacher in der Höhe
+      const z = position.z + (Math.random() * 2 - 1) * radius;
+      
+      // Position setzen
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
+      
+      // Blau-türkise Farbe mit leichter Variation
+      colors[i * 3] = 0.1 + Math.random() * 0.1; // Rot-Anteil (niedrig)
+      colors[i * 3 + 1] = 0.5 + Math.random() * 0.3; // Grün-Anteil (mittel)
+      colors[i * 3 + 2] = 0.8 + Math.random() * 0.2; // Blau-Anteil (hoch)
+    }
+    
+    // Füge Attribute zur Geometrie hinzu
+    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    // Material für die Partikel
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 2,
+      transparent: true,
+      opacity: 0.5,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    
+    // Erstelle das Partikelsystem
+    const particleSystem = new THREE.Points(particles, particleMaterial);
+    particleSystem.name = 'blueFog';
+    scene.add(particleSystem);
+    
+    // Animation des Nebels - er wird langsam erscheinen und dann verschwinden
+    const startTime = Date.now();
+    const animateFog = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / duration;
+      
+      if (progress < 1.0) {
+        // Nebel bewegt sich leicht und pulsiert
+        for (let i = 0; i < particleCount; i++) {
+          positions[i * 3] += Math.sin(elapsed * 0.001 + i) * 0.03;
+          positions[i * 3 + 2] += Math.cos(elapsed * 0.001 + i) * 0.03;
+          positions[i * 3 + 1] += Math.sin(elapsed * 0.002 + i) * 0.01; // Leicht auf und ab
+        }
+        particles.attributes.position.needsUpdate = true;
+        
+        // Opazität über Zeit anpassen
+        if (progress < 0.2) {
+          // Einblenden
+          particleMaterial.opacity = progress * 2.5 * intensity;
+        } else if (progress > 0.7) {
+          // Ausblenden
+          particleMaterial.opacity = (1.0 - progress) * 3.3 * intensity;
+        } else {
+          // Volle Intensität
+          particleMaterial.opacity = intensity;
+        }
+        
+        requestAnimationFrame(animateFog);
+      } else {
+        // Nebel entfernen, wenn die Animation fertig ist
+        scene.remove(particleSystem);
+      }
+    };
+    
+    // Animation starten
+    animateFog();
+    
+    return particleSystem;
   }
 
   // Update-Funktion wird für jeden Frame aufgerufen
