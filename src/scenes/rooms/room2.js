@@ -23,6 +23,8 @@ export class Room2 extends BaseRoom {
     this.colliders = [];
     this.soundsStarted = false;
     this._quizShowRequested = false; // Merker, falls Spritze vor Terminal geladen wird
+    this._quakeTriggered = false; // Flag für Erdbeben-Trigger
+    this.quakeTriggerActive = false; // Wird in init aktiviert
   }
 
   init() {
@@ -108,6 +110,27 @@ export class Room2 extends BaseRoom {
       scene.camera.position.set(start.position.x, start.position.y, start.position.z);
       scene.camera.lookAt(start.lookAt.x, start.lookAt.y, start.lookAt.z);
     }
+
+  // --- Trigger-Wand für Beben im Korridor ---
+    // Position: deutlich weiter links von der Startposition (X-Achse verringern)
+    const triggerWallGeometry = new THREE.BoxGeometry(70, 16, 20); // Extra große Wand für bessere Erkennung
+    // Sichtbare Farbe für Debug (z.B. halbtransparentes Rot)
+    const triggerWallMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 });
+    const triggerWall = new THREE.Mesh(triggerWallGeometry, triggerWallMaterial);
+    triggerWall.position.set(start.position.x - -3, start.position.y - 2, start.position.z - 40); // Näher und tiefer positionieren
+    triggerWall.name = 'quake_trigger_wall';
+    scene.add(triggerWall);
+    
+    // Nur Kollisionserkennung: Die Wand reagiert NICHT auf Klicks, nur auf Durchlaufen
+    console.log("Beben-Trigger-Wand platziert bei:", triggerWall.position);
+    
+    // Collider-basierte Erkennung - Trigger-Box für die Kollisionserkennung in update()
+    this.quakeTriggerBox = new THREE.Box3().setFromObject(triggerWall);
+    this.quakeTriggerActive = true;
+
+    
+    // Stellen wir sicher, dass diese Box nicht mit dem Clipboard oder Terminal kollidiert
+    triggerWall.userData.ignoreRaycast = true; // Zusätzliche Absicherung gegen unerwünschte Raycast-Interaktionen
 
     // Licht
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -299,5 +322,117 @@ export class Room2 extends BaseRoom {
     flicker();
   }
 
+  // Erdbeben-/Shake-Effekt für die Kamera
+  shakeCamera(intensity = 0.5, duration = 500) {
+    const camera = this.scene.camera;
+    if (!camera) return;
+    const originalPosition = camera.position.clone();
+    let elapsed = 0;
+    const shake = () => {
+      if (elapsed < duration) {
+        camera.position.x = originalPosition.x + (Math.random() - 0.5) * intensity;
+        camera.position.y = originalPosition.y + (Math.random() - 0.5) * intensity;
+        camera.position.z = originalPosition.z + (Math.random() - 0.5) * intensity;
+        elapsed += 16;
+        requestAnimationFrame(shake);
+      } else {
+        camera.position.copy(originalPosition);
+      }
+    };
+    shake();
+  }
+
+  // Update-Funktion wird für jeden Frame aufgerufen
+  update() {
+    if (typeof super.update === 'function') {
+      super.update(); // Basisklassen-Methode aufrufen, falls vorhanden
+    }
+    
+    // Prüfen, ob der Spieler die Trigger-Box für das Beben berührt
+    if (this.quakeTriggerActive && this.quakeTriggerBox && this.scene.camera) {
+      // Erstelle Box um Spieler-Position (Kamera) - etwas größer für bessere Erkennung
+      const playerPosition = this.scene.camera.position.clone();
+      const playerBox = new THREE.Box3(
+        new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
+        new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
+      );
+      
+      // Debug: Zeige Position der Kamera
+      if (Math.random() < 0.005) { // Noch seltener loggen
+        console.log("Spieler-Position:", playerPosition);
+      }
+      
+      // Prüfe Kollision zwischen Spieler und Trigger-Box
+      if (this.quakeTriggerBox.intersectsBox(playerBox)) {
+        console.log("BEBEN AUSGELÖST durch Kollision!");
+        this._quakeTriggered = true;
+        this.quakeTriggerActive = false;
+        
+        // Trigger-Wand bleibt jetzt als unsichtbare Barriere
+        const triggerWall = this.scene.getObjectByName('quake_trigger_wall');
+        if (triggerWall) {
+          console.log("Mache Trigger-Wand unsichtbar aber aktiv als Barriere");
+          // Wand unsichtbar machen aber als Barriere behalten
+          triggerWall.material.opacity = 0.0;
+        }
+        
+        // Startposition speichern für "Boomerang"-Effekt
+        this.startPosition = START_POSITIONS.FLUR.position;
+        
+        // Warten wir einen Moment vor dem Beben, damit der Sound zuerst startet
+        setTimeout(() => {
+          // Sicherstellen, dass Clipboard und Terminal noch funktionieren können
+          this.shakeCamera(1.5, 1800); // Etwas stärkeres Beben für besseren Effekt
+        }, 200);
+      }
+    }
+    
+    // Prüfen, ob der Spieler versucht, durch die (nun unsichtbare) Barriere zu gehen
+    if (this._quakeTriggered && this.scene.camera) {
+      const playerPosition = this.scene.camera.position.clone();
+      const triggerWall = this.scene.getObjectByName('quake_trigger_wall');
+      
+      if (triggerWall) {
+        // Erstelle eine aktualisierte Bounding Box für die Wand
+        const wallBox = new THREE.Box3().setFromObject(triggerWall);
+        
+        // Erweiterte Box um den Spieler
+        const playerBox = new THREE.Box3(
+          new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
+          new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
+        );
+        
+        // Wenn der Spieler versucht, durch die Wand zu gehen (kollision)
+        if (wallBox.intersectsBox(playerBox)) {
+          console.log("Spieler versucht, durch die Barriere zu gehen - Boomerang zurück zum Start!");
+          
+          // Sound für Teleport
+          const teleportSound = new Audio('/assets/audio/earth-rumble.wav');
+          teleportSound.volume = 0.3;
+          teleportSound.play().catch(e => {});
+          
+          // "Boomerang" Effekt - zurück zum Startpunkt
+          const start = START_POSITIONS.FLUR;
+          if (this.scene.camera) {
+            this.scene.camera.position.set(start.position.x, start.position.y, start.position.z);
+            this.scene.camera.lookAt(start.lookAt.x, start.lookAt.y, start.lookAt.z);
+          }
+          
+          // Flag setzen, damit wir den Teleport nicht mehrfach hintereinander auslösen
+          this.lastTeleportTime = Date.now();
+          
+          // Nach 3 Sekunden den "find_the_room" Sound abspielen
+          setTimeout(() => {
+            console.log("Spiele 'find_the_room' Sound nach Teleport");
+            const findRoomSound = new Audio('/assets/audio/find_the_room.mp3');
+            findRoomSound.volume = 0.5;
+            findRoomSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+          }, 3000);
+        }
+      }
+    }
+  }
   // ...existing code...
 }
+
+

@@ -18,7 +18,9 @@ export function setupRayInteraction(camera) {
     // if (document.pointerLockElement !== document.body) return;
 
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects([...registry.keys()], false);
+    // Filtere Objekte, die ignoreRaycast=true haben
+    const raycastTargets = [...registry.keys()].filter(obj => !obj.userData?.ignoreRaycast);
+    const intersects = raycaster.intersectObjects(raycastTargets, false);
 
     console.log("🎯 Treffer:", intersects.length);
     if (intersects.length > 0) {

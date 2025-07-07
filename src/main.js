@@ -55,6 +55,12 @@ function animate() {
   // Nutze das passende Update (je nach deinem Setup)
   if (typeof update === 'function') update();
   if (controls && typeof controls.update === 'function') controls.update();
+  
+  // Update-Methode des aktuellen Raums aufrufen (für Kollisionserkennung usw.)
+  if (currentRoom && typeof currentRoom.update === 'function') {
+    currentRoom.update();
+  }
+  
   renderer.render(scene, camera);
 
   // Blubberblasen hinzufügen für Raum1
