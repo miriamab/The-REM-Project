@@ -75,7 +75,7 @@ export class Room2 extends BaseRoom {
         ];
         gltfObjects.forEach(obj => {
           const loader = new GLTFLoader();
-          loader.load(obj.file, (gltf) => {
+          loader.load(obj.file, (gltf) => { 
             const model = gltf.scene;
             model.position.set(...obj.pos);
             model.scale.set(...obj.scale);
