@@ -74,9 +74,9 @@ export class Room2 extends BaseRoom {
           { file: '/hospital_objects/wheelchair.glb', pos: [137, -6.5, -100], scale: [0.60,0.60,0.60] }
         ];
         gltfObjects.forEach(obj => {
-          const loader = new GLTFLoader();
+          const loader = new GLTFLoader(); 
           loader.load(obj.file, (gltf) => { 
-            const model = gltf.scene;
+            const model = gltf.scene; 
             model.position.set(...obj.pos); 
             model.scale.set(...obj.scale);
             model.traverse(child => { if (child.isMesh) child.visible = true; });
