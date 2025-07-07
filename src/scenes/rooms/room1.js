@@ -98,7 +98,7 @@ export class Room1 extends BaseRoom {
     const textureLoader = new THREE.TextureLoader();
     const wallTexture = textureLoader.load('assets/images/wall1.png');
     const floorTexture = textureLoader.load('assets/images/floor1.jpg');
-    const ceilingTexture = textureLoader.load('assets/images/floor1.jpg');
+    const ceilingTexture = textureLoader.load('assets/images/decke1.jpg');
 
     const loader = new GLTFLoader();
 
@@ -121,6 +121,61 @@ export class Room1 extends BaseRoom {
     floor.rotation.x = Math.PI / 2;
     floor.position.y = 0.01;
     this.add(floor);
+
+    // Fußbodenleiste (Sockelleiste) 
+const baseboardMaterial = new THREE.MeshStandardMaterial({ color: 0x8a7457 }); // hellgrau, ggf. Textur
+const baseboardHeight = 0.12;
+const baseboardDepth = 0.08;
+const baseboardY = baseboardHeight / 2 + 0.01; // knapp über dem Boden
+const baseboardOffset = 0.26;
+
+// Rückwand (leiste)
+const baseboardBack = new THREE.Mesh(new THREE.BoxGeometry(20, baseboardHeight, baseboardDepth), baseboardMaterial);
+baseboardBack.position.set(0, baseboardY, -10 + baseboardDepth / 2 + baseboardOffset);
+this.add(baseboardBack);
+
+// Vorderwand (leiste)
+const baseboardFront = new THREE.Mesh(new THREE.BoxGeometry(20, baseboardHeight, baseboardDepth), baseboardMaterial);
+baseboardFront.position.set(0, baseboardY, 10 - baseboardDepth / 2 - baseboardOffset);
+this.add(baseboardFront);
+
+// Linke Wand (leiste)
+const baseboardLeft = new THREE.Mesh(new THREE.BoxGeometry(baseboardDepth, baseboardHeight, 20), baseboardMaterial);
+baseboardLeft.position.set(-10 + baseboardDepth / 2 + baseboardOffset, baseboardY, 0);
+this.add(baseboardLeft);
+
+// Rechte Wand (leiste)
+const baseboardRight = new THREE.Mesh(new THREE.BoxGeometry(baseboardDepth, baseboardHeight, 20), baseboardMaterial);
+baseboardRight.position.set(10 - baseboardDepth / 2 - baseboardOffset, baseboardY, 0);
+this.add(baseboardRight);
+
+// Deckenleiste (Stuckleiste)
+const crownMaterial = new THREE.MeshStandardMaterial({ color: 0x8a7457 }); // z.B. cremeweiß, ggf. Textur
+const crownHeight = 0.12;
+const crownDepth = 0.08; // genauso schmal wie die Fußleiste
+const crownY = 9 - crownHeight / 2; // knapp unter der Decke (Decke ist bei y=9)
+const crownOffset = 0.26; // analog zur Fußleiste
+
+// Rückwand (leiste decke)
+const crownBack = new THREE.Mesh(new THREE.BoxGeometry(20, crownHeight, crownDepth), crownMaterial);
+crownBack.position.set(0, crownY, -10 + crownDepth / 2 + crownOffset);
+this.add(crownBack);
+
+// Vorderwand (leiste decke)
+const crownFront = new THREE.Mesh(new THREE.BoxGeometry(20, crownHeight, crownDepth), crownMaterial);
+crownFront.position.set(0, crownY, 10 - crownDepth / 2 - crownOffset);
+this.add(crownFront);
+
+// Linke Wand (leiste decke)
+const crownLeft = new THREE.Mesh(new THREE.BoxGeometry(crownDepth, crownHeight, 20), crownMaterial);
+crownLeft.position.set(-10 + crownDepth / 2 + crownOffset, crownY, 0);
+this.add(crownLeft);
+
+// Rechte Wand (leiste decke)
+const crownRight = new THREE.Mesh(new THREE.BoxGeometry(crownDepth, crownHeight, 20), crownMaterial);
+crownRight.position.set(10 - crownDepth / 2 - crownOffset, crownY, 0);
+this.add(crownRight);
+
 
     // Sichtbare Wände (mit Textur)
 const visibleWallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture, side: THREE.DoubleSide });
@@ -209,6 +264,30 @@ this.colliders.push(colliderRightWall);
 
       this.radioLock = makeRadioInteractive(radio, 'assets/audio/radio-music.mp3', this);
     });
+
+    // Schwarzer Kreis an der Wand
+const blackCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Schwarz
+const blackCircleGeometry = new THREE.CircleGeometry(2.1, 45); // Radius 2, 32 Segmente für glatte Kanten
+const blackCircle = new THREE.Mesh(blackCircleGeometry, blackCircleMaterial);
+
+// Position und Rotation anpassen
+blackCircle.position.set(-4.5, 2.8, 9.5); // An der Vorderwand (gegenüber der Kommode)
+blackCircle.rotation.y = Math.PI; // An die Wand ausrichten
+this.add(blackCircle);
+
+    // Glow-Effekt um den schwarzen Kreis
+const glowMaterial = new THREE.MeshBasicMaterial({
+  color: 0x000000, // Farbe des Glows (z.B. gelb)
+  transparent: true,
+  opacity: 0.5, // Leicht transparent
+});
+const glowGeometry = new THREE.CircleGeometry(4, 45); // Etwas größer als der schwarze Kreis
+const glowCircle = new THREE.Mesh(glowGeometry, glowMaterial);
+
+// Position und Rotation anpassen (gleiche wie der schwarze Kreis)
+glowCircle.position.set(-4.5, 2.8, 9.49); // Leicht hinter dem schwarzen Kreis
+glowCircle.rotation.y = Math.PI; // An die Wand ausrichten
+this.add(glowCircle);
 
     // Lamp
     loader.load('src/objects/models/room_1/lamp/lamp.glb', (gltf) => {
