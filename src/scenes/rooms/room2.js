@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
-import { BaseRoom } from './BaseRoom.js';
+import { BaseRoom } from './BaseRoom.js.js';
 import { START_POSITIONS } from '../../constants/StartPositions.js';
 import { registerInteractive } from '../../interactions/useRayInteraction.js';
 import { startQuiz } from '../../interactions/quiz_logic.js';
@@ -27,6 +27,11 @@ export class Room2 extends BaseRoom {
     this.quakeTriggerActive = false; // Wird in init aktiviert
     this._fallTriggered = false; // Flag für Fall-Trigger
     this.fallTriggerActive = true; // Wird in init aktiviert
+    this.squidModel = null; // Referenz zum Squid-Modell für Animation
+    this.squidFloatingAnimationId = null; // ID für Animation-Frame
+    this.squidChasingAnimationId = null; // ID für Verfolgungsanimation
+    this.squidLight = null; // Lichteffekt für das Squid während der Verfolgung
+    this.isSquidChasing = false; // Flag für aktiven Verfolgungsmodus
   }
 
   init() {
@@ -71,12 +76,14 @@ export class Room2 extends BaseRoom {
         });
 
         // --- Weitere medizinische Objekte platzieren ---
+        // Speichere non-squid Objekte separat
         const gltfObjects = [
           { file: '/hospital_objects/bottles_medical.glb', pos: [120, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
-          { file: '/hospital_objects/squid.glb', pos: [90, 10, -135], scale: [19,19,19], rot: [0, 0, 0] },
           { file: '/hospital_objects/hospital_asset.glb', pos: [160, 9.3, -192], scale: [0.01,0.01,0.01], rot: [0, -Math.PI/2, 0] },
           { file: '/hospital_objects/wheelchair.glb', pos: [168, -6.5, -130], scale: [0.60,0.60,0.60], rot: [0, Math.PI, 0] }
         ];
+        
+        // Lade alle normalen Objekte
         gltfObjects.forEach(obj => {
           const loader = new GLTFLoader(); 
           loader.load(obj.file, (gltf) => { 
@@ -89,6 +96,34 @@ export class Room2 extends BaseRoom {
           }, undefined, (err) => {
             console.error('FEHLER beim Laden von', obj.file, err);
           });
+        });
+        
+        // Lade squid.glb separat, um eine Referenz darauf zu speichern
+        const squidLoader = new GLTFLoader();
+        squidLoader.load('/hospital_objects/squid.glb', (gltf) => {
+          const squidModel = gltf.scene;
+          squidModel.position.set(90, 10, -135);
+          squidModel.scale.set(19, 19, 19);
+          squidModel.rotation.set(0, 0, 0);
+          squidModel.name = 'squid_model'; // Name für einfaches Auffinden
+          squidModel.traverse(child => { 
+            if (child.isMesh) {
+              child.visible = true;
+              // Optional: Material für bessere Sichtbarkeit anpassen
+              if (child.material) {
+                child.material.roughness = 0.7;
+                child.material.metalness = 0.3;
+              }
+            } 
+          });
+          
+          // Squid zum Scene hinzufügen und Referenz im Room2-Objekt speichern
+          this.scene.add(squidModel);
+          this.squidModel = squidModel;
+          
+          console.log("Squid-Modell geladen und gespeichert für Animation");
+        }, undefined, (err) => {
+          console.error('FEHLER beim Laden von squid.glb:', err);
         });
         
         // Medizinischer Rucksack mit Interaktion (verschwinden beim Klicken)
@@ -187,7 +222,7 @@ export class Room2 extends BaseRoom {
     // Stellen wir sicher, dass diese Box nicht mit anderen Objekten interagiert
     fallTriggerWall.userData.ignoreRaycast = true; 
 
-    // Blood Door in der Nähe des Backpacks einfügen (blood_door.glb)
+    // Blood Door in der Nähe des Backpacks einfügen (prison_door.glb)
     const bloodDoorLoader = new GLTFLoader();
     bloodDoorLoader.load('/prison_door.glb', (gltf) => {
       const bloodDoor = gltf.scene;
@@ -198,7 +233,13 @@ export class Room2 extends BaseRoom {
       bloodDoor.scale.set(10, 10, 10); // Skalierung je nach Modellgröße anpassen
       bloodDoor.rotation.set(0, 0, 0); // Keine Rotation, Tür ist seitlich zu sehen
       
-      // Tür sichtbar machen, aber Boden ausblenden
+      // Zielposition für die Teleportation (vor dem Squid-Modell)
+      const teleportDestination = {
+        position: new THREE.Vector3(70, 10, -100), // Position vor dem Squid (original squid: 90, 10, -135)
+        lookAt: new THREE.Vector3(90, 10, -135)   // Blick in Richtung des Squids
+      };
+      
+      // Tür sichtbar machen, aber Boden ausblenden und Interaktion hinzufügen
       bloodDoor.traverse(obj => {
         if (obj.isMesh) {
           obj.visible = true;
@@ -212,7 +253,64 @@ export class Room2 extends BaseRoom {
             obj.visible = false;
           }
           
-          // Keine Interaktion mit der Tür mehr
+          // Teleport-Interaktion mit der Tür
+          registerInteractive(obj, () => {
+            console.log('Teleportiere zur Squid-Position...');
+            
+            // Teleport-Sound abspielen (Electric Chimes)
+            const teleportSound = new Audio('/assets/audio/teleport.wav');
+            teleportSound.volume = 0.7;
+            teleportSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+            
+            // Temporär Spielerkontrolle deaktivieren während der Teleportation
+            const originalVelocity = window.controls ? window.controls.velocity : 0;
+            if (window.controls) window.controls.velocity = 0;
+            
+            // Visueller Effekt für die Teleportation - sofort dunkler Nebel
+            const originalFog = scene.fog ? scene.fog.clone() : new THREE.Fog(0x000000, 20, 150);
+            scene.fog = new THREE.Fog(0x000000, 0.1, 0.2);
+            
+            // Teleportation mit leichter Verzögerung für besseren Sound-Effekt
+            setTimeout(() => {
+              // Kamera teleportieren
+              if (scene.camera) {
+                // Position und Blickrichtung ändern
+                scene.camera.position.copy(teleportDestination.position);
+                scene.camera.lookAt(teleportDestination.lookAt);
+                
+                // Nach kurzer Zeit wieder zum normalen Nebel zurücksetzen und Controls wiederherstellen
+                setTimeout(() => {
+                  scene.fog = originalFog;
+                  
+                  // Spielerkontrolle wiederherstellen
+                  if (window.controls) window.controls.velocity = originalVelocity;
+                  
+                  // Geisterhafte Stimme abspielen nach der Teleportation
+                  setTimeout(() => {
+                    const ghostlyVoice = new Audio('/assets/audio/after_teleport.mp3');
+                    ghostlyVoice.volume = 0.5;
+                    ghostlyVoice.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+                    
+                    // Erst türkisenen Nebel im ganzen Raum erzeugen, dann das Squid-Modell verfolgen lassen
+                    setTimeout(() => {
+                      console.log("Erzeuge türkisen Nebel vor der Squid-Animation...");
+                      
+                      // Türkiser Nebel im gesamten Raum
+                      const fogPosition = new THREE.Vector3(70, 10, -120); // Zentrum des Nebels in der Mitte des Raums
+                      const roomFog = this.createRoomFog(fogPosition, 5, 5000); // Intensiver Nebel, aber kurze Dauer
+                      
+                      // Nach dem Nebel das Squid-Modell verfolgen lassen
+                      setTimeout(() => {
+                        console.log("Starte Squid-Animation mit Verfolgungsmodus...");
+                        // Squid-Animation mit Verfolgen des Spielers
+                        this.startSquidChasing();
+                      }, 3000); // 3 Sekunden nach dem Nebelstart
+                    }, 1500);
+                  }, 1000);
+                }, 500);
+              }
+            }, 200);
+          });
         }
       });
       
@@ -635,10 +733,419 @@ export class Room2 extends BaseRoom {
     return particleSystem;
   }
 
+  // Türkisen Nebel im gesamten Raum erzeugen (größere Reichweite als der normale Nebel)
+  createRoomFog(position, intensity = 5, duration = 10000) {
+    const scene = this.scene;
+    if (!scene) return;
+    
+    // Eerie Sound für den Nebel
+    const fogSound = new Audio('/assets/audio/things_unremembered.mp3');
+    fogSound.volume = 0.3;
+    fogSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+    
+    // Erstelle ein größeres Partikelsystem für den Raum-weiten Nebel
+    const particleCount = 3000; // Mehr Partikel für dichten Nebel
+    const particles = new THREE.BufferGeometry();
+    
+    // Arrays für Partikel-Positionen und Farben
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    
+    // Nebel im gesamten Raum erzeugen
+    const radius = 100; // Viel größerer Radius als beim normalen Nebel
+    const height = 30; // Höhenverteilung
+    
+    // Für jeden Partikel
+    for (let i = 0; i < particleCount; i++) {
+      // Verteilung über den ganzen Raum mit höherer Dichte beim Squid
+      // Wir nutzen eine Mischung aus Zufallsverteilung und gezielter Platzierung
+      
+      // Entscheiden, ob der Partikel nahe am Squid oder im ganzen Raum platziert wird
+      const nearSquid = Math.random() < 0.3; // 30% der Partikel nahe am Squid
+      
+      let x, y, z;
+      
+      if (nearSquid && this.squidModel) {
+        // Nahe am Squid (mit Offset)
+        const squidPos = this.squidModel.position;
+        x = squidPos.x + (Math.random() * 2 - 1) * 20;
+        y = squidPos.y + (Math.random() * 2 - 1) * 15;
+        z = squidPos.z + (Math.random() * 2 - 1) * 20;
+      } else {
+        // Im gesamten Raum
+        x = position.x + (Math.random() * 2 - 1) * radius;
+        y = position.y + (Math.random() * 2 - 1) * height;
+        z = position.z + (Math.random() * 2 - 1) * radius;
+      }
+      
+      // Position setzen
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
+      
+      // Türkis-blaue Farbe mit Variation für unheimlichen Effekt
+      colors[i * 3] = 0.05 + Math.random() * 0.1; // Rot-Anteil (sehr niedrig)
+      colors[i * 3 + 1] = 0.6 + Math.random() * 0.3; // Grün-Anteil (höher für türkis)
+      colors[i * 3 + 2] = 0.7 + Math.random() * 0.3; // Blau-Anteil (hoch)
+    }
+    
+    // Füge Attribute zur Geometrie hinzu
+    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    // Material für die Partikel - größere und transparentere Partikel
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 3,
+      transparent: true,
+      opacity: 0.4,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    
+    // Erstelle das Partikelsystem
+    const particleSystem = new THREE.Points(particles, particleMaterial);
+    particleSystem.name = 'roomFog';
+    scene.add(particleSystem);
+    
+    // Animation des Nebels - pulsierende Bewegung und langsames Verschwinden
+    const startTime = Date.now();
+    const animateFog = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / duration;
+      
+      if (progress < 1.0) {
+        // Komplexere Nebelbewegung für unheimlicheren Effekt
+        for (let i = 0; i < particleCount; i++) {
+          // Verschiedene Frequenzen für verschiedene Partikel
+          const freq1 = 0.0005 + (i % 5) * 0.0001;
+          const freq2 = 0.0003 + (i % 7) * 0.0001;
+          const freq3 = 0.0007 + (i % 3) * 0.0001;
+          
+          // Wellenförmige Bewegung in allen drei Dimensionen
+          positions[i * 3] += Math.sin(elapsed * freq1 + i) * 0.03;
+          positions[i * 3 + 1] += Math.cos(elapsed * freq2 + i) * 0.02;
+          positions[i * 3 + 2] += Math.sin(elapsed * freq3 + i) * 0.03;
+          
+          // Leichte Drift in Richtung Spieler für ein "Verfolgungs"-Gefühl
+          if (scene.camera && Math.random() < 0.01) {
+            const toPlayer = new THREE.Vector3().subVectors(
+              scene.camera.position,
+              new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])
+            ).normalize().multiplyScalar(0.05);
+            
+            positions[i * 3] += toPlayer.x;
+            positions[i * 3 + 1] += toPlayer.y;
+            positions[i * 3 + 2] += toPlayer.z;
+          }
+        }
+        
+        particles.attributes.position.needsUpdate = true;
+        
+        // Opazität und Farbe über Zeit anpassen
+        if (progress < 0.2) {
+          // Einblenden
+          particleMaterial.opacity = progress * 2.5 * intensity;
+        } else if (progress > 0.7) {
+          // Ausblenden
+          particleMaterial.opacity = (1.0 - progress) * 3.3 * intensity;
+          
+          // Farbänderung gegen Ende - leicht rötlicher werden für dramatischen Effekt
+          for (let i = 0; i < particleCount; i++) {
+            const fadeProgress = (progress - 0.7) / 0.3;
+            colors[i * 3] = 0.05 + Math.random() * 0.1 + fadeProgress * 0.3; // Rot zunehmen
+            colors[i * 3 + 1] = 0.6 + Math.random() * 0.3 - fadeProgress * 0.2; // Grün abnehmen
+          }
+          particles.attributes.color.needsUpdate = true;
+        } else {
+          // Volle Intensität mit leichter Pulsation
+          const pulse = Math.sin(elapsed * 0.001) * 0.2 + 0.8;
+          particleMaterial.opacity = intensity * pulse;
+        }
+        
+        requestAnimationFrame(animateFog);
+      } else {
+        // Nebel entfernen, wenn die Animation fertig ist
+        scene.remove(particleSystem);
+        
+        // Sound stoppen
+        fogSound.pause();
+        fogSound.currentTime = 0;
+      }
+    };
+    
+    // Animation starten
+    animateFog();
+    
+    return particleSystem;
+  }
+
+  // Fügt eine kontinuierliche Schwebebewegung zum Squid hinzu
+  addSquidFloatingAnimation() {
+    if (!this.squidModel) return;
+    
+    const finalPosition = this.squidModel.position.clone();
+    
+    const floatAnimation = () => {
+      if (this.squidModel) {
+        const time = Date.now() * 0.001; // Zeit in Sekunden für sanftere Bewegung
+        
+        // Sanfte Schwebebewegung
+        this.squidModel.position.y = finalPosition.y + Math.sin(time * 0.5) * 2;
+        this.squidModel.position.x = finalPosition.x + Math.sin(time * 0.3) * 1;
+        
+        // Sanfte Rotation
+        this.squidModel.rotation.z = Math.sin(time * 0.2) * 0.05;
+        this.squidModel.rotation.y = Math.sin(time * 0.1) * 0.1;
+        
+        // Animation fortsetzen
+        this.squidFloatingAnimationId = requestAnimationFrame(floatAnimation);
+      }
+    };
+    
+    // Animation starten
+    floatAnimation();
+  }
+
+  // Startet einen kontinuierlichen Verfolgungsmodus des Squids
+  startSquidChasing() {
+    if (!this.squidModel || !this.scene.camera) {
+      console.error('Squid-Modell oder Kamera nicht gefunden für Verfolgung!');
+      return;
+    }
+    
+    // Sound für die Verfolgung des Squids abspielen
+    const chaseSound = new Audio('/assets/audio/bear-sound.wav');
+    chaseSound.volume = 0.5;
+    chaseSound.loop = true;
+    chaseSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+    
+    // Verfolgungs-Parameter
+    const speed = 0.04; // Geschwindigkeit der Verfolgung
+    const minDistance = 20; // Minimale Distanz zum Spieler
+    const wobbleStrength = 2; // Stärke der Wackelbewegung
+    
+    // Flag für aktive Verfolgung setzen
+    this.isSquidChasing = true;
+    
+    // Sicherstellen, dass alte Animation gestoppt wird
+    if (this.squidFloatingAnimationId) {
+      cancelAnimationFrame(this.squidFloatingAnimationId);
+    }
+    
+    // Chaotische Farbe für den Squid
+    if (this.squidModel) {
+      this.squidModel.traverse(child => {
+        if (child.isMesh && child.material) {
+          // Material speichern für spätere Wiederherstellung
+          if (!child.userData.originalMaterial) {
+            child.userData.originalMaterial = child.material.clone();
+          }
+          
+          // Unheimliches türkises Material
+          child.material.emissive = new THREE.Color(0.1, 0.5, 0.6);
+          child.material.emissiveIntensity = 0.2;
+        }
+      });
+    }
+    
+    // Startzeit für Animation
+    const startTime = Date.now();
+    
+    // Verfolgungslogik
+    const chasePlayer = () => {
+      if (!this.isSquidChasing || !this.squidModel || !this.scene.camera) {
+        // Animation beenden, wenn sie gestoppt wurde
+        chaseSound.pause();
+        chaseSound.currentTime = 0;
+        return;
+      }
+      
+      // Aktuelle Position des Spielers und des Squids
+      const playerPosition = this.scene.camera.position.clone();
+      const squidPosition = this.squidModel.position.clone();
+      
+      // Richtungsvektor zum Spieler
+      const direction = new THREE.Vector3().subVectors(playerPosition, squidPosition).normalize();
+      
+      // Distanz zum Spieler berechnen
+      const distanceToPlayer = squidPosition.distanceTo(playerPosition);
+      
+      // Animationszeit für Wackelbewegung
+      const elapsed = Date.now() - startTime;
+      
+      // Bewegungslogik
+      if (distanceToPlayer > minDistance) {
+        // Nur bewegen, wenn Mindestabstand noch nicht erreicht
+        
+        // Bewegung in Richtung Spieler
+        const moveAmount = speed * (1 + Math.sin(elapsed * 0.001) * 0.3); // Variable Geschwindigkeit
+        this.squidModel.position.add(direction.multiplyScalar(moveAmount));
+        
+        // Wackelbewegung für unheimlicheren Effekt
+        const wobbleX = Math.sin(elapsed * 0.005) * wobbleStrength; 
+        const wobbleY = Math.sin(elapsed * 0.003) * wobbleStrength + Math.sin(elapsed * 0.007) * (wobbleStrength / 2);
+        
+        this.squidModel.position.x += wobbleX * 0.05;
+        this.squidModel.position.y += wobbleY * 0.05;
+        
+        // Drehung in Richtung Spieler mit leichtem Wackeln
+        this.squidModel.lookAt(playerPosition);
+        
+        // Zusätzliches Wackeln in der Rotation
+        this.squidModel.rotation.z += Math.sin(elapsed * 0.002) * 0.05;
+        this.squidModel.rotation.x += Math.sin(elapsed * 0.004) * 0.03;
+        
+        // Soundeffekt-Lautstärke basierend auf Entfernung
+        const volume = Math.max(0.1, Math.min(0.8, 1 - (distanceToPlayer / 100)));
+        chaseSound.volume = volume;
+      } else {
+        // Wenn Mindestabstand erreicht, leichte Schwebeanimation
+        this.squidModel.position.y += Math.sin(elapsed * 0.003) * 0.1;
+        
+        // Drehung aufrecht halten, aber Spieler anschauen
+        this.squidModel.lookAt(playerPosition);
+        this.squidModel.rotation.z = Math.sin(elapsed * 0.001) * 0.1;
+      }
+      
+      // Lichteffekt am Squid
+      if (!this.squidLight) {
+        // Erstelle Licht, wenn noch keines existiert
+        this.squidLight = new THREE.PointLight(0x00ffff, 1, 30);
+        this.scene.add(this.squidLight);
+      }
+      
+      // Lichtposition aktualisieren
+      if (this.squidLight) {
+        this.squidLight.position.copy(this.squidModel.position);
+        this.squidLight.position.y += 5;
+        
+        // Lichtintensität pulsieren lassen
+        this.squidLight.intensity = 0.7 + Math.sin(elapsed * 0.002) * 0.3;
+      }
+      
+      // Partikeleffekt - gelegentlich türkise "Tropfen" vom Squid
+      if (Math.random() < 0.05) {
+        this.createSquidDroplet(this.squidModel.position.clone());
+      }
+      
+      // Animation fortsetzen
+      this.squidChasingAnimationId = requestAnimationFrame(chasePlayer);
+    };
+    
+    // Animation starten
+    chasePlayer();
+  }
+  
+  // Erzeugt einen türkisen "Tropfen" als Partikeleffekt vom Squid
+  createSquidDroplet(position) {
+    if (!this.scene) return;
+    
+    // Geometrie für den Tropfen
+    const geometry = new THREE.SphereGeometry(0.5, 8, 8);
+    
+    // Türkises, leuchtendes Material
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.7
+    });
+    
+    // Erstelle den Tropfen
+    const droplet = new THREE.Mesh(geometry, material);
+    droplet.position.copy(position);
+    
+    // Leichter Offset
+    droplet.position.x += (Math.random() - 0.5) * 3;
+    droplet.position.y += (Math.random() - 0.5) * 3 - 2; // Tendenz nach unten
+    droplet.position.z += (Math.random() - 0.5) * 3;
+    
+    this.scene.add(droplet);
+    
+    // Fallgeschwindigkeit
+    const fallSpeed = 0.05 + Math.random() * 0.1;
+    
+    // Lebensdauer
+    const lifetime = 1000 + Math.random() * 2000;
+    const startTime = Date.now();
+    
+    // Animation für den Tropfen
+    const animateDroplet = () => {
+      const elapsed = Date.now() - startTime;
+      
+      if (elapsed < lifetime && droplet) {
+        // Fallendes Verhalten
+        droplet.position.y -= fallSpeed;
+        
+        // Größe verringern
+        const scale = 1 - elapsed / lifetime;
+        droplet.scale.set(scale, scale, scale);
+        
+        // Transparenz erhöhen wenn der Tropfen verschwindet
+        material.opacity = 0.7 * (1 - elapsed / lifetime);
+        
+        requestAnimationFrame(animateDroplet);
+      } else if (droplet) {
+        // Tropfen entfernen, wenn Lebensdauer vorbei
+        this.scene.remove(droplet);
+      }
+    };
+    
+    // Animation starten
+    animateDroplet();
+  }
+
   // Update-Funktion wird für jeden Frame aufgerufen
   update() {
     if (typeof super.update === 'function') {
       super.update(); // Basisklassen-Methode aufrufen, falls vorhanden
+    }
+    
+    // Squid-Spieler-Kollisionserkennung im Verfolgungsmodus
+    if (this.isSquidChasing && this.squidModel && this.scene.camera) {
+      const playerPosition = this.scene.camera.position.clone();
+      const squidPosition = this.squidModel.position.clone();
+      
+      // Distanz zwischen Spieler und Squid
+      const distanceToSquid = playerPosition.distanceTo(squidPosition);
+      
+      // Wenn Squid sehr nahe am Spieler ist (fast Kollision), Kamera-Shake-Effekt
+      if (distanceToSquid < 10) {
+        // Stärke des Shake-Effekts basierend auf der Nähe
+        const intensity = (10 - distanceToSquid) / 5;
+        
+        // Nur ab und zu schütteln (nicht jeden Frame)
+        if (Math.random() < 0.1) {
+          this.shakeCamera(intensity * 0.5, 200);
+          
+          // "Flüstern" Sound gelegentlich abspielen für extra Grusel-Effekt
+          if (Math.random() < 0.2) {
+            const whisperSound = new Audio('/assets/audio/memories_lie.mp3');
+            whisperSound.volume = 0.3;
+            whisperSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+          }
+        }
+        
+        // Rote Bildschirmränder bei sehr naher Kollision
+        if (distanceToSquid < 5) {
+          // Hier würde man normalerweise einen roten Vignette-Effekt hinzufügen
+          // Da dies aber einen HTML/CSS-Overlay benötigen würde, lassen wir es bei dem Kamera-Shake
+          
+          // Stattdessen verstärken wir den Herzschlag-Sound
+          if (Math.random() < 0.1 && !this.heartbeatPlaying) {
+            this.heartbeatPlaying = true;
+            const heartbeatSound = new Audio('/assets/audio/memories_lie.mp3'); // Alternativ zum Herzschlag
+            heartbeatSound.volume = 0.5;
+            heartbeatSound.play().catch(e => {
+              console.log("Audio konnte nicht abgespielt werden:", e);
+            }).finally(() => {
+              setTimeout(() => {
+                this.heartbeatPlaying = false;
+              }, 3000);
+            });
+          }
+        }
+      }
     }
     
     // Prüfen, ob der Spieler die Trigger-Box für das Beben berührt
@@ -766,6 +1273,42 @@ export class Room2 extends BaseRoom {
       }
     }
   }
+
+  // Bereinigt Ressourcen beim Verlassen der Szene
+  dispose() {
+    // Animationen stoppen
+    if (this.squidFloatingAnimationId) {
+      cancelAnimationFrame(this.squidFloatingAnimationId);
+      this.squidFloatingAnimationId = null;
+    }
+    
+    if (this.squidChasingAnimationId) {
+      cancelAnimationFrame(this.squidChasingAnimationId);
+      this.squidChasingAnimationId = null;
+    }
+    
+    // Lichter entfernen
+    if (this.squidLight && this.scene) {
+      this.scene.remove(this.squidLight);
+      this.squidLight = null;
+    }
+    
+    // Flag für Verfolgung zurücksetzen
+    this.isSquidChasing = false;
+    
+    // Materialien des Squids wiederherstellen
+    if (this.squidModel) {
+      this.squidModel.traverse(child => {
+        if (child.isMesh && child.material && child.userData.originalMaterial) {
+          child.material = child.userData.originalMaterial;
+        }
+      });
+    }
+    
+    // Basisklassen-Methode aufrufen, falls vorhanden
+    if (typeof super.dispose === 'function') {
+      super.dispose();
+    }
+  }
+
 }
-
-
