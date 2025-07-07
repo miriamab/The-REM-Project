@@ -218,10 +218,10 @@ this.colliders.push(colliderRightWall);
       this.add(lamp);
 
       // Unsichtbarer, aber klickbarer Quader um die Lampe
-      const boxGeometry = new THREE.BoxGeometry(3, 10, 3); 
+      const boxGeometry = new THREE.BoxGeometry(3, 6, 3); 
       const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0 });
       const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
-      hitbox.position.set(0, 1, 0); // Position relativ zur Lampe (ggf. anpassen)
+      hitbox.position.set(0, 4.01, 0); // Position relativ zur Lampe (ggf. anpassen)
       lamp.add(hitbox);
       this.colliders.push(hitbox);
 
@@ -255,6 +255,29 @@ this.colliders.push(colliderRightWall);
 
       this.tvLock = makeTVInteractive(tv, this);
     });
+
+    // Soviet Chair in der Nähe des TVs platzieren
+    loader.load('src/objects/models/soviet_chair.glb', (gltf) => {
+      const chair = gltf.scene;
+      chair.position.set(2, 0.1, 6); 
+      chair.scale.set(0.9, 0.9, 0.9); // Größe ggf. anpassen
+      chair.rotation.y = Math.PI / 3; // leicht zur Raummitte drehen
+      this.add(chair);
+      this.colliders.push(chair);
+    });
+
+
+
+    // Tassen
+    loader.load('src/objects/models/room_1/soviet_mug.glb', (gltf) => {
+      const mug = gltf.scene;
+      mug.scale.set(13, 13, 13);
+      mug.position.set(4, 0.1, -7);
+      mug.rotation.y = Math.PI / 2; // zur Wand drehen
+      this.add(mug);
+      this.colliders.push(mug);
+    });
+
 
 /** 
     // Blubberblasen Rätsel
@@ -306,7 +329,7 @@ const wallPaintMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(6, 4),
   new THREE.MeshBasicMaterial({ map: wallPaintTexture, transparent: true })
 );
-wallPaintMesh.position.set(2, 4, 9.7);
+wallPaintMesh.position.set(2, 5, 9.7);
 wallPaintMesh.rotation.y = Math.PI;
 wallPaintMesh.visible = false;
 this.add(wallPaintMesh);
@@ -334,6 +357,72 @@ this.add(wallTeddyMesh);
 
 // Referenzen speichern
 this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
+
+    // Kissen-Pack (post-apocalypse_pillow_pack.glb) auf dem Boden platzieren
+    loader.load('src/objects/models/room_1/post-apocalypse_pillow_pack.glb', (gltf) => {
+      const pillowPack = gltf.scene;
+      pillowPack.position.set(5, 0.1, 2); // x, y (leicht über Boden), z – Position ggf. anpassen
+      pillowPack.scale.set(0.3, 0.3, 0.3); // Größe ggf. anpassen
+      pillowPack.rotation.y = 0; // ggf. drehen
+      this.add(pillowPack);
+    });
+
+    // Aschenbecher (ashtray_with_cigarettes.glb) auf dem Boden platzieren
+    loader.load('src/objects/models/room_1/ashtray_with_cigarettes.glb', (gltf) => {
+      const ashtray = gltf.scene;
+      ashtray.position.set(3, 0.15, 6); // Beispiel-Position, leicht über dem Boden
+      ashtray.scale.set(5.2, 5.2, 5.2); // Größe ggf. anpassen
+      this.add(ashtray);
+    });
+
+      // Toycar
+    loader.load('src/objects/models/room_1/toy_car.glb', (gltf) => {
+      const toycar = gltf.scene;
+      toycar.scale.set(3, 3, 3);
+      toycar.position.set(-1, 0.36, 4);
+      toycar.rotation.y = Math.PI; // zur Wand drehen
+      this.add(toycar);
+      // Unsichtbarer, klickbarer Cube direkt in die Szene (nicht als Kind!)
+      const boxGeometry = new THREE.BoxGeometry(2, 1, 3); // schmaler und niedriger
+      const boxMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
+      boxMaterial.depthWrite = false; // verhindert Z-Buffer-Probleme
+      const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
+      hitbox.position.set(-1, 0.7, 4); // niedriger, näher am Auto
+      hitbox.renderOrder = -1; // immer hinter allem rendern
+      this.add(hitbox);
+      let moved = false;
+      registerInteractive(hitbox, () => {
+        const from = toycar.position.x;
+        const to = moved ? -1 : -2.5;
+        let start = null;
+        function animateToycar(timestamp) {
+          if (!start) start = timestamp;
+          const progress = Math.min((timestamp - start) / 1000, 1);
+          toycar.position.x = from + (to - from) * progress;
+          if (progress < 1) {
+            requestAnimationFrame(animateToycar);
+          }
+        }
+        requestAnimationFrame(animateToycar);
+        moved = !moved;
+      });
+    }); 
+
+
+    // Somna Floor als kleine, um 180° gedrehte Plane GENAU unter das Toycar
+    const somnaFloorTexture = textureLoader.load('assets/images/somna_floor.png');
+    const somnaFloorMaterial = new THREE.MeshBasicMaterial({ map: somnaFloorTexture, transparent: true });
+    const somnaFloorGeometry = new THREE.PlaneGeometry(1.1, 0.4); // halb so groß
+    const somnaFloorMesh = new THREE.Mesh(somnaFloorGeometry, somnaFloorMaterial);
+    somnaFloorMesh.renderOrder = 0; // Wird vor dem Blut gerendert
+    // Position exakt wie Toycar, aber auf Bodenhöhe
+    const toycarX = -1, toycarZ = 4;
+    somnaFloorMesh.position.set(toycarX, 0.015, toycarZ);
+    somnaFloorMesh.rotation.x = -Math.PI / 2;
+    somnaFloorMesh.rotation.z = Math.PI; // um 180° drehen
+    this.add(somnaFloorMesh);
+
+   
 
   } // Ende init
 
