@@ -214,10 +214,10 @@ this.colliders.push(colliderRightWall);
       this.add(lamp);
 
       // Unsichtbarer, aber klickbarer Quader um die Lampe
-      const boxGeometry = new THREE.BoxGeometry(3, 10, 3); 
+      const boxGeometry = new THREE.BoxGeometry(3, 6, 3); 
       const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0 });
       const hitbox = new THREE.Mesh(boxGeometry, boxMaterial);
-      hitbox.position.set(0, 1, 0); // Position relativ zur Lampe (ggf. anpassen)
+      hitbox.position.set(0, 4.01, 0); // Position relativ zur Lampe (ggf. anpassen)
       lamp.add(hitbox);
       this.colliders.push(hitbox);
 
@@ -413,7 +413,7 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
     somnaFloorMesh.renderOrder = 0; // Wird vor dem Blut gerendert
     // Position exakt wie Toycar, aber auf Bodenhöhe
     const toycarX = -1, toycarZ = 4;
-    somnaFloorMesh.position.set(toycarX, 0.02, toycarZ);
+    somnaFloorMesh.position.set(toycarX, 0.015, toycarZ);
     somnaFloorMesh.rotation.x = -Math.PI / 2;
     somnaFloorMesh.rotation.z = Math.PI; // um 180° drehen
     this.add(somnaFloorMesh);

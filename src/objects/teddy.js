@@ -52,7 +52,7 @@ export function startBloodPool(scene, teddyPosition) {
   material.depthTest = true;   // Blut wird von echten Objekten überdeckt
   const bloodPool = new THREE.Mesh(geometry, material);
   bloodPool.rotation.x = -Math.PI / 2; // Flach auf den Boden legen
-  bloodPool.position.set(teddyPosition.x, 0.011, teddyPosition.z); // Direkt auf dem Boden
+  bloodPool.position.set(teddyPosition.x, 0.016, teddyPosition.z); // Direkt auf dem Boden
   bloodPool.renderOrder = 1.5; // Leicht erhöht, aber nicht über allem
 
   scene.add(bloodPool);
