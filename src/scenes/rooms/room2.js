@@ -68,10 +68,10 @@ export class Room2 extends BaseRoom {
 
         // --- Weitere medizinische Objekte in der Nähe des Clipboards platzieren ---
         const gltfObjects = [
-          { file: '/hospital_objects/bottles_medical.glb', pos: [140, 0, -150], scale: [0.02,0.02,0.02] },
-          { file: '/hospital_objects/hospital_asset.glb', pos: [144, 8, -140], scale: [0.01,0.01,0.01] },
-          { file: '/hospital_objects/medical_backpack.glb', pos: [137, 8, -143], scale: [5,5,5] },
-          { file: '/hospital_objects/wheelchair.glb', pos: [137, -6.5, -100], scale: [0.60,0.60,0.60] }
+          { file: '/hospital_objects/bottles_medical.glb', pos: [140, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
+          { file: '/hospital_objects/hospital_asset.glb', pos: [160, 9.3, -192], scale: [0.01,0.01,0.01], rot: [0, -Math.PI/2, 0] },
+          { file: '/hospital_objects/medical_backpack.glb', pos: [137, 3, -143], scale: [5,5,5], rot: [0, 0, 0] },
+          { file: '/hospital_objects/wheelchair.glb', pos: [168, -6.5, -130], scale: [0.60,0.60,0.60], rot: [0, Math.PI, 0] }
         ];
         gltfObjects.forEach(obj => {
           const loader = new GLTFLoader(); 
@@ -79,6 +79,7 @@ export class Room2 extends BaseRoom {
             const model = gltf.scene; 
             model.position.set(...obj.pos); 
             model.scale.set(...obj.scale);
+            model.rotation.set(...obj.rot);
             model.traverse(child => { if (child.isMesh) child.visible = true; });
             this.scene.add(model);
           }, undefined, (err) => {
@@ -131,9 +132,9 @@ export class Room2 extends BaseRoom {
     const terminalLoader = new GLTFLoader();
     terminalLoader.load('/terminal.glb', (gltf) => {
       const terminalModel = gltf.scene;
-      terminalModel.scale.set(0.16, 0.16, 0.16);
-      terminalModel.position.set(110, 0, -182);
-      terminalModel.rotation.y = -Math.PI / 2;
+      terminalModel.scale.set(0.85, 0.85, 0.85);
+      terminalModel.position.set(220, 10, -200);
+      terminalModel.rotation.y = Math.PI / 2;
       terminalModel.name = 'quiz_terminal_model';
       terminalModel.traverse(obj => {
         if (obj.isMesh) {
