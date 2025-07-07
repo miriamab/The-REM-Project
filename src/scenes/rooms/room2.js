@@ -25,6 +25,8 @@ export class Room2 extends BaseRoom {
     this._quizShowRequested = false; // Merker, falls Spritze vor Terminal geladen wird
     this._quakeTriggered = false; // Flag für Erdbeben-Trigger
     this.quakeTriggerActive = false; // Wird in init aktiviert
+    this._fallTriggered = false; // Flag für Fall-Trigger
+    this.fallTriggerActive = true; // Wird in init aktiviert
   }
 
   init() {
@@ -68,11 +70,10 @@ export class Room2 extends BaseRoom {
           }
         });
 
-        // --- Weitere medizinische Objekte in der Nähe des Clipboards platzieren ---
+        // --- Weitere medizinische Objekte platzieren ---
         const gltfObjects = [
           { file: '/hospital_objects/bottles_medical.glb', pos: [140, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
           { file: '/hospital_objects/hospital_asset.glb', pos: [160, 9.3, -192], scale: [0.01,0.01,0.01], rot: [0, -Math.PI/2, 0] },
-          { file: '/hospital_objects/medical_backpack.glb', pos: [137, 3, -143], scale: [5,5,5], rot: [0, 0, 0] },
           { file: '/hospital_objects/wheelchair.glb', pos: [168, -6.5, -130], scale: [0.60,0.60,0.60], rot: [0, Math.PI, 0] }
         ];
         gltfObjects.forEach(obj => {
@@ -87,6 +88,37 @@ export class Room2 extends BaseRoom {
           }, undefined, (err) => {
             console.error('FEHLER beim Laden von', obj.file, err);
           });
+        });
+        
+        // Medizinischer Rucksack mit Interaktion (verschwinden beim Klicken)
+        const backpackLoader = new GLTFLoader();
+        backpackLoader.load('/hospital_objects/medical_backpack.glb', (gltf) => {
+          const backpack = gltf.scene;
+          backpack.name = 'medical_backpack';
+          backpack.position.set(110, 10, 119);
+          backpack.scale.set(14, 14, 14);
+          backpack.rotation.set(0, 0, 0);
+          
+          backpack.traverse(child => {
+            if (child.isMesh) {
+              child.visible = true;
+              // Interaktion registrieren
+              registerInteractive(child, () => {
+                // Sound abspielen
+                console.log("Medizinischer Rucksack wurde aufgehoben! Spiele 'one_item' Sound ab");
+                const itemSound = new Audio('/assets/audio/one_item.mp3');
+                itemSound.volume = 0.4;
+                itemSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+                
+                // Objekt aus Szene entfernen
+                this.scene.remove(backpack);
+              });
+            }
+          });
+          
+          this.scene.add(backpack);
+        }, undefined, (err) => {
+          console.error('FEHLER beim Laden von medical_backpack.glb:', err);
         });
       },
       undefined,
@@ -114,8 +146,8 @@ export class Room2 extends BaseRoom {
   // --- Trigger-Wand für Beben im Korridor ---
     // Position: deutlich weiter links von der Startposition (X-Achse verringern)
     const triggerWallGeometry = new THREE.BoxGeometry(70, 16, 20); // Extra große Wand für bessere Erkennung
-    // Sichtbare Farbe für Debug (z.B. halbtransparentes Rot)
-    const triggerWallMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 });
+    // Komplett unsichtbare Wand (opacity: 0.0)
+    const triggerWallMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.0 });
     const triggerWall = new THREE.Mesh(triggerWallGeometry, triggerWallMaterial);
     triggerWall.position.set(start.position.x - -3, start.position.y - 2, start.position.z - 40); // Näher und tiefer positionieren
     triggerWall.name = 'quake_trigger_wall';
@@ -131,6 +163,28 @@ export class Room2 extends BaseRoom {
     
     // Stellen wir sicher, dass diese Box nicht mit dem Clipboard oder Terminal kollidiert
     triggerWall.userData.ignoreRaycast = true; // Zusätzliche Absicherung gegen unerwünschte Raycast-Interaktionen
+
+    // --- Fall-Trigger-Wand hinter dem Rucksack ---
+    // Position: hinter dem Rucksack platzieren (medical_backpack ist bei 110, 10, 119)
+    const fallTriggerGeometry = new THREE.BoxGeometry(70, 16, 40); // Breite Wand für bessere Erkennung
+    // Unsichtbare Wand von Anfang an (opacity: 0.0)
+    const fallTriggerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.0 });
+    const fallTriggerWall = new THREE.Mesh(fallTriggerGeometry, fallTriggerMaterial);
+    // Platzierung im Flur (weiter rechts verschoben)
+    // X-Position nach rechts verschoben (von 140 auf 200)
+    fallTriggerWall.position.set(45, 10, 100); 
+    fallTriggerWall.name = 'fall_trigger_wall';
+    scene.add(fallTriggerWall);
+    
+    // Nur Kollisionserkennung: Die Wand reagiert NICHT auf Klicks, nur auf Durchlaufen
+    console.log("Fall-Trigger-Wand platziert bei:", fallTriggerWall.position);
+    
+    // Collider-basierte Erkennung - Trigger-Box für die Kollisionserkennung in update()
+    this.fallTriggerBox = new THREE.Box3().setFromObject(fallTriggerWall);
+    this.fallTriggerActive = true;
+    
+    // Stellen wir sicher, dass diese Box nicht mit anderen Objekten interagiert
+    fallTriggerWall.userData.ignoreRaycast = true; 
 
     // Licht
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -212,9 +266,9 @@ export class Room2 extends BaseRoom {
       syringe.position.set(170, 7.7, -178);
       syringe.rotation.y = Math.PI / 2;
       syringe.name = 'quiz_syringe';
-      // Ursprüngliches Material der Spritze beibehalten (keine pinke Farbe mehr)
+     
       scene.add(syringe);
-      // Interaktion: Klick auf die Spritze öffnet die Quiz-Seite und loggt in die Konsole
+    
       registerInteractive(syringe, () => {
         console.log('Spritze wurde geklickt! Quiz wird geöffnet...');
         window.location.href = '/quiz.html';
@@ -342,6 +396,107 @@ export class Room2 extends BaseRoom {
     shake();
   }
 
+  // Fall-Animation für die Kamera - echtes "von oben nach unten" Fallen simulieren
+  simulateFall(duration = 2000, distance = 30) {
+    const camera = this.scene.camera;
+    if (!camera) return;
+    
+    // Originale Position merken (für Wiederherstellung nach dem Fall wenn gewünscht)
+    const originalPosition = camera.position.clone();
+    // Originale Rotation merken
+    const originalRotation = {
+      x: camera.rotation.x,
+      y: camera.rotation.y,
+      z: camera.rotation.z
+    };
+    
+    // WICHTIG: Kamera zuerst nach oben teleportieren, damit wir von dort fallen können
+    // Wir positionieren den Spieler hoch über seiner aktuellen Position
+    camera.position.y = originalPosition.y + 100; // 100 Einheiten über der aktuellen Position
+    
+    const startTime = Date.now();
+    let isFalling = true;
+    
+    // Temporär Spielerkontrolle deaktivieren
+    const originalVelocity = window.controls ? window.controls.velocity : 0;
+    if (window.controls) window.controls.velocity = 0;
+    
+    // NUR den falling.wav Sound abspielen während des Falls
+    const fallSound = new Audio('/assets/audio/falling.wav');
+    fallSound.volume = 0.7;
+    fallSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+    
+    // Fallanimation mit exponentieller Beschleunigung
+    const fallAnimation = () => {
+      if (!isFalling) return;
+      
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Quadratische Beschleunigung für realistischeren Fall (mit größerer Distanz)
+      // Wir wollen von (originalPosition.y + 100) bis zum Bodenlevel des Hospitals fallen
+      // Das Bodenlevel ist deutlich über 0, damit wir nicht zu tief fallen
+      const floorLevel = 10; // Hospital-Bodenlevel deutlich höher angesetzt
+      const totalFallDistance = (originalPosition.y + 100) - floorLevel; // Distanz bis zum Boden
+      const fallDistance = totalFallDistance * Math.pow(progress, 1.8); // Etwas steilere Beschleunigung
+      
+      // Kamera von oben nach unten bewegen, aber nicht unter den Boden fallen
+      const newY = (originalPosition.y + 100) - fallDistance;
+      camera.position.y = Math.max(newY, floorLevel); // Nicht unter den Boden fallen
+      
+      // Stärkerer Dreheffekt für Desorientierung
+      const rotationAmount = 0.1 * Math.sin(progress * Math.PI * 4);
+      camera.rotation.z = originalRotation.z + rotationAmount;
+      
+      // Zusätzlich Vor- und Zurückkippen für besseres Fallgefühl
+      const pitchAmount = 0.2 * Math.sin(progress * Math.PI * 3);
+      camera.rotation.x = originalRotation.x + pitchAmount;
+      
+      // Nächster Frame oder Animation beenden
+      if (progress < 1) {
+        requestAnimationFrame(fallAnimation);
+      } else {
+        // Animation beenden, Spieler ist "aufgeschlagen"
+        isFalling = false;
+        
+        // Leichter Aufprall-Effekt
+        this.shakeCamera(2.0, 300);
+        
+        // Nach kurzer Pause Kontrolle wiederherstellen und auf dem Boden des Hospitals bleiben
+        setTimeout(() => {
+          // Statt zur Startposition zurückzukehren, bleiben wir am aktuellen Ort auf dem Boden
+          // Wir behalten die X/Z Position, aber setzen Y auf das Floor-Level (5)
+          if (this.scene.camera) {
+            // X und Z Koordinaten beibehalten, nur Y auf höhere Bodenhöhe setzen
+            const currentPos = this.scene.camera.position;
+            this.scene.camera.position.set(currentPos.x, 10, currentPos.z);
+            
+            // In Blickrichtung schauen (leicht nach vorne)
+            this.scene.camera.lookAt(currentPos.x, 10, currentPos.z - 10);
+          }
+          
+          // Rotation zurücksetzen für normale Ansicht
+          camera.rotation.x = originalRotation.x;
+          camera.rotation.y = originalRotation.y;
+          camera.rotation.z = originalRotation.z;
+          
+          // Spielerkontrolle wiederherstellen
+          if (window.controls) window.controls.velocity = originalVelocity;
+          
+          // Informationsmeldung in der Konsole
+          console.log("Spieler ist auf dem Boden des Hospitals gelandet!");
+          
+        }, 3000); // Längere Pause nach dem Aufprall für dramatischen Effekt
+      }
+    };
+    
+    // Keinen Wind-Sound mehr verwenden, da wir nur falling.wav abspielen
+    this.fallWindSound = null;
+    
+    // Animation starten
+    fallAnimation();
+  }
+
   // Update-Funktion wird für jeden Frame aufgerufen
   update() {
     if (typeof super.update === 'function') {
@@ -371,9 +526,8 @@ export class Room2 extends BaseRoom {
         // Trigger-Wand bleibt jetzt als unsichtbare Barriere
         const triggerWall = this.scene.getObjectByName('quake_trigger_wall');
         if (triggerWall) {
-          console.log("Mache Trigger-Wand unsichtbar aber aktiv als Barriere");
-          // Wand unsichtbar machen aber als Barriere behalten
-          triggerWall.material.opacity = 0.0;
+          console.log("Trigger-Wand bleibt als unsichtbare Barriere aktiv");
+          // Wand war bereits von Anfang an unsichtbar, daher keine Änderung nötig
         }
         
         // Startposition speichern für "Boomerang"-Effekt
@@ -431,8 +585,49 @@ export class Room2 extends BaseRoom {
         }
       }
     }
+    
+    // Prüfen, ob der Spieler die Fall-Trigger-Box berührt
+    if (this.fallTriggerActive && this.fallTriggerBox && this.scene.camera && !this._fallTriggered) {
+      // Erstelle Box um Spieler-Position (Kamera)
+      const playerPosition = this.scene.camera.position.clone();
+      const playerBox = new THREE.Box3(
+        new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
+        new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
+      );
+      
+      // Debug: Zeige Position der Kamera gelegentlich
+      if (Math.random() < 0.005) {
+        console.log("Spieler-Position (Fall-Trigger):", playerPosition);
+      }
+      
+      // Prüfe Kollision zwischen Spieler und Fall-Trigger-Box
+      if (this.fallTriggerBox.intersectsBox(playerBox)) {
+        console.log("FALL AUSGELÖST durch Kollision mit Fall-Trigger!");
+        this._fallTriggered = true;
+        // Komplett deaktivieren - nie wieder triggern
+        this.fallTriggerActive = false;
+        
+        // Fall-Wand komplett aus der Szene entfernen
+        const fallTriggerWall = this.scene.getObjectByName('fall_trigger_wall');
+        if (fallTriggerWall) {
+          console.log("Fall-Trigger-Wand wird komplett entfernt");
+          // Wand aus der Szene entfernen
+          this.scene.remove(fallTriggerWall);
+        }
+        
+        // Fall-Animation starten - jetzt mit verbessertem Fallgefühl von oben
+        // Längere Dauer (4 Sekunden) und große Falldistanz für dramatischen Effekt
+        this.simulateFall(4000, 100);
+        
+        // Nach einer längeren Pause können wir den _fallTriggered Flag zurücksetzen
+        // Aber wir lassen fallTriggerActive auf false, damit der Trigger nicht erneut aktiviert wird
+        setTimeout(() => {
+          this._fallTriggered = false;
+          // this.fallTriggerActive bleibt auf false - nicht wieder aktivieren
+        }, 12000); // 12 Sekunden warten
+      }
+    }
   }
-  // ...existing code...
 }
 
 
