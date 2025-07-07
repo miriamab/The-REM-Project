@@ -77,7 +77,7 @@ export class Room2 extends BaseRoom {
           const loader = new GLTFLoader();
           loader.load(obj.file, (gltf) => { 
             const model = gltf.scene;
-            model.position.set(...obj.pos);
+            model.position.set(...obj.pos); 
             model.scale.set(...obj.scale);
             model.traverse(child => { if (child.isMesh) child.visible = true; });
             this.scene.add(model);
