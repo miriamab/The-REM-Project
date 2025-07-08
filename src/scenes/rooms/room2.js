@@ -278,6 +278,15 @@ export class Room2 extends BaseRoom {
                 scene.camera.position.copy(teleportDestination.position);
                 scene.camera.lookAt(teleportDestination.lookAt);
                 
+                // SOFORT nach der Teleportation türkisen Nebel im ganzen Raum erzeugen
+                console.log("Erzeuge türkisen Nebel SOFORT nach der Teleportation...");
+                
+                // Türkiser Nebel im gesamten Raum - Position direkt an der Teleport-Destination
+                // Intensität erhöht und längere Dauer für dramatischeren Effekt
+                const fogPosition = scene.camera.position.clone();
+                fogPosition.y += 5; // Leicht über der Kamera, damit der Nebel besser zu sehen ist
+                const roomFog = this.createRoomFog(fogPosition, 8, 10000); // Noch intensiverer Nebel und längere Dauer
+                
                 // Nach kurzer Zeit wieder zum normalen Nebel zurücksetzen und Controls wiederherstellen
                 setTimeout(() => {
                   scene.fog = originalFog;
@@ -291,21 +300,13 @@ export class Room2 extends BaseRoom {
                     ghostlyVoice.volume = 0.5;
                     ghostlyVoice.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
                     
-                    // Erst türkisenen Nebel im ganzen Raum erzeugen, dann das Squid-Modell verfolgen lassen
+                    // Nach der Stimme das Squid-Modell verfolgen lassen
+                    // Der Nebel ist bereits seit der Teleportation da
                     setTimeout(() => {
-                      console.log("Erzeuge türkisen Nebel vor der Squid-Animation...");
-                      
-                      // Türkiser Nebel im gesamten Raum
-                      const fogPosition = new THREE.Vector3(70, 10, -120); // Zentrum des Nebels in der Mitte des Raums
-                      const roomFog = this.createRoomFog(fogPosition, 5, 5000); // Intensiver Nebel, aber kurze Dauer
-                      
-                      // Nach dem Nebel das Squid-Modell verfolgen lassen
-                      setTimeout(() => {
-                        console.log("Starte Squid-Animation mit Verfolgungsmodus...");
-                        // Squid-Animation mit Verfolgen des Spielers
-                        this.startSquidChasing();
-                      }, 3000); // 3 Sekunden nach dem Nebelstart
-                    }, 1500);
+                      console.log("Starte Squid-Animation mit Verfolgungsmodus...");
+                      // Squid-Animation mit Verfolgen des Spielers
+                      this.startSquidChasing();
+                    }, 3000);
                   }, 1000);
                 }, 500);
               }
@@ -738,146 +739,330 @@ export class Room2 extends BaseRoom {
     const scene = this.scene;
     if (!scene) return;
     
-    // Eerie Sound für den Nebel
+    // Eerie Sound für den Nebel - BLEIBT UNVERÄNDERT
     const fogSound = new Audio('/assets/audio/things_unremembered.mp3');
     fogSound.volume = 0.3;
     fogSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
     
-    // Erstelle ein größeres Partikelsystem für den Raum-weiten Nebel
-    const particleCount = 3000; // Mehr Partikel für dichten Nebel
-    const particles = new THREE.BufferGeometry();
+    // -------- NOCH DRAMATISCHERER, EXTREM DICHTER VOLUMETRISCHER RAUCH-EFFEKT --------
     
-    // Arrays für Partikel-Positionen und Farben
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    
-    // Nebel im gesamten Raum erzeugen
-    const radius = 100; // Viel größerer Radius als beim normalen Nebel
-    const height = 30; // Höhenverteilung
-    
-    // Für jeden Partikel
-    for (let i = 0; i < particleCount; i++) {
-      // Verteilung über den ganzen Raum mit höherer Dichte beim Squid
-      // Wir nutzen eine Mischung aus Zufallsverteilung und gezielter Platzierung
+    // Erstelle eine HOCHAUFLÖSENDE, optimierte Rauch-Textur für maximale Sichtbarkeit
+    const createSmokeTexture = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; // Noch höhere Auflösung für bessere Qualität
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
       
-      // Entscheiden, ob der Partikel nahe am Squid oder im ganzen Raum platziert wird
-      const nearSquid = Math.random() < 0.3; // 30% der Partikel nahe am Squid
+      // Hellerer, intensiverer Radial-Gradient für dramatischen Rauch
+      const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)'); // Vollständig undurchsichtig im Zentrum
+      gradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.95)'); // Mehr Deckkraft nahe am Zentrum
+      gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.7)'); // Höhere Deckkraft in der Mitte
+      gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
       
-      let x, y, z;
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 512, 512);
       
-      if (nearSquid && this.squidModel) {
-        // Nahe am Squid (mit Offset)
-        const squidPos = this.squidModel.position;
-        x = squidPos.x + (Math.random() * 2 - 1) * 20;
-        y = squidPos.y + (Math.random() * 2 - 1) * 15;
-        z = squidPos.z + (Math.random() * 2 - 1) * 20;
-      } else {
-        // Im gesamten Raum
-        x = position.x + (Math.random() * 2 - 1) * radius;
-        y = position.y + (Math.random() * 2 - 1) * height;
-        z = position.z + (Math.random() * 2 - 1) * radius;
+      // Komplexere Struktur für massiveren, dichteren Rauch
+      ctx.globalCompositeOperation = 'overlay';
+      
+      // Mehr und größere Wolkenmuster im Rauch für mehr Tiefe und Volumen
+      for (let i = 0; i < 40; i++) { // Doppelt so viele Wolkenstrukturen
+        const x = Math.random() * 512;
+        const y = Math.random() * 512;
+        const radius = 30 + Math.random() * 80; // Größere Wolkenstrukturen
+        
+        const cloudGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        cloudGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)'); // Höhere Deckkraft
+        cloudGradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+        
+        ctx.fillStyle = cloudGradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
       }
       
-      // Position setzen
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
+      // Zusätzliche Turbulenzmuster für mehr "Wirbel" im Rauch
+      for (let i = 0; i < 15; i++) {
+        const x1 = Math.random() * 512;
+        const y1 = Math.random() * 512;
+        const x2 = x1 + (Math.random() * 200 - 100);
+        const y2 = y1 + (Math.random() * 200 - 100);
+        
+        const grd = ctx.createLinearGradient(x1, y1, x2, y2);
+        grd.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+        grd.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
+        grd.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+        
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.ellipse(
+          (x1 + x2) / 2, 
+          (y1 + y2) / 2, 
+          Math.abs(x2 - x1) / 2 + 20, 
+          Math.abs(y2 - y1) / 2 + 20, 
+          Math.atan2(y2 - y1, x2 - x1), 
+          0, 
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
       
-      // Türkis-blaue Farbe mit Variation für unheimlichen Effekt
-      colors[i * 3] = 0.05 + Math.random() * 0.1; // Rot-Anteil (sehr niedrig)
-      colors[i * 3 + 1] = 0.6 + Math.random() * 0.3; // Grün-Anteil (höher für türkis)
-      colors[i * 3 + 2] = 0.7 + Math.random() * 0.3; // Blau-Anteil (hoch)
+      ctx.globalCompositeOperation = 'source-over';
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      return texture;
+    };
+    
+    // Intensivere türkise Farbe für den Rauch - leicht aufgehellt für bessere Sichtbarkeit
+    const smokeColor = new THREE.Color(0x20E6E2);
+    
+    // Erstelle DEUTLICH mehr große, auffällige Rauch-Wolken
+    const smokeCount = 100;  // DRASTISCH erhöhte Rauch-Elementzahl für maximale Abdeckung
+    const smokeElements = [];
+    const smokeTexture = createSmokeTexture();
+    
+    for (let i = 0; i < smokeCount; i++) {
+      // MASSIV vergrößerte Planes für einen dramatischeren Rauch-Effekt
+      const smokeSize = 40 + Math.random() * 80; // EXTREM GROSSE Rauch-Elemente für maximale Abdeckung
+      const smokeGeometry = new THREE.PlaneGeometry(smokeSize, smokeSize);
+      
+      // Material mit Textur für realistischeren Rauch - angepasste Parameter für maximale Sichtbarkeit
+      const smokeMaterial = new THREE.MeshBasicMaterial({
+        map: smokeTexture,
+        transparent: true,
+        opacity: 0.0, // Starten unsichtbar, dann einblenden
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        color: smokeColor,
+        blending: THREE.AdditiveBlending
+      });
+      
+      // Erstelle den Rauch-Puff
+      const smokePlane = new THREE.Mesh(smokeGeometry, smokeMaterial);
+      
+      // Position: Verteile den Rauch in einem deutlich größeren Bereich
+      const spreadRadius = 180; // EXTREM BREITE Verteilung für vollständige Raumabdeckung
+      const baseHeight = position.y - 15; // Noch tiefer starten für bessere Bodenabdeckung
+      
+      // Sicherstellen, dass der Rauch auch den Squid und wichtige Bereiche abdeckt
+      // Ein Teil des Rauchs wird gezielt in wichtigen Bereichen platziert
+      let x, z;
+      
+      if (i % 3 === 0 && this.squidModel) {
+        // Jedes dritte Element nahe am Squid positionieren (mit etwas Abweichung)
+        x = this.squidModel.position.x + (Math.random() * 2 - 1) * 40;
+        z = this.squidModel.position.z + (Math.random() * 2 - 1) * 40;
+      } else if (i % 3 === 1) {
+        // Ein Drittel gezielt vor dem Spieler platzieren
+        if (scene.camera) {
+          const cameraDir = new THREE.Vector3(0, 0, -1);
+          cameraDir.applyQuaternion(scene.camera.quaternion);
+          cameraDir.multiplyScalar(50 + Math.random() * 40);
+          x = scene.camera.position.x + cameraDir.x;
+          z = scene.camera.position.z + cameraDir.z;
+        } else {
+          x = position.x + (Math.random() * 2 - 1) * spreadRadius;
+          z = position.z + (Math.random() * 2 - 1) * spreadRadius;
+        }
+      } else {
+        // Rest zufällig im gesamten Raum verteilen
+        x = position.x + (Math.random() * 2 - 1) * spreadRadius;
+        z = position.z + (Math.random() * 2 - 1) * spreadRadius;
+      }
+      
+      smokePlane.position.set(
+        x,
+        baseHeight + Math.random() * 10, // Größere Höhenvariation
+        z
+      );
+      
+      // Billboard-Effekt - immer zur Kamera gedreht
+      smokePlane.lookAt(scene.camera ? scene.camera.position : new THREE.Vector3(0, 0, 0));
+      
+      // Zufällige Rotation um die eigene Achse
+      smokePlane.rotation.z = Math.random() * Math.PI * 2;
+      
+      // Zum Rauch-Array und zur Szene hinzufügen
+      smokeElements.push({
+        mesh: smokePlane,
+        material: smokeMaterial,
+        baseY: smokePlane.position.y,
+        speed: 0.05 + Math.random() * 0.15, // Schnelleres Aufsteigen für bessere Sichtbarkeit
+        rotationSpeed: (Math.random() * 2 - 1) * 0.01, // Drehgeschwindigkeit
+        startTime: i * 100 // Gestaffelte Startzeit für natürlicheres Erscheinungsbild
+      });
+      
+      scene.add(smokePlane);
     }
     
-    // Füge Attribute zur Geometrie hinzu
-    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    
-    // Material für die Partikel - größere und transparentere Partikel
-    const particleMaterial = new THREE.PointsMaterial({
-      size: 3,
-      transparent: true,
-      opacity: 0.4,
-      vertexColors: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    
-    // Erstelle das Partikelsystem
-    const particleSystem = new THREE.Points(particles, particleMaterial);
-    particleSystem.name = 'roomFog';
-    scene.add(particleSystem);
-    
-    // Animation des Nebels - pulsierende Bewegung und langsames Verschwinden
+    // DRAMATISCH verstärkte Rauch-Schicht am Boden für einen "Wall of Fog"-Effekt
+    // Diese Schicht bildet einen dichten, kriechenden Nebelteppich am Boden
+    const floorSmokeCount = 60; // VERDOPPELT für extrem dichte Bodenabdeckung
+    for (let i = 0; i < floorSmokeCount; i++) {
+      // NOCH größere, flachere Ebenen für einen massiven Boden-Rauch
+      const floorSmokeSize = 70 + Math.random() * 100; // EXTREM große Bodennebel-Elemente
+      const floorSmokeGeometry = new THREE.PlaneGeometry(floorSmokeSize, floorSmokeSize);
+      
+      // Material mit höherer Deckkraft für undurchsichtigeren Bodeneffekt
+      const floorSmokeMaterial = new THREE.MeshBasicMaterial({
+        map: smokeTexture,
+        transparent: true,
+        opacity: 0.0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        color: smokeColor,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const floorSmoke = new THREE.Mesh(floorSmokeGeometry, floorSmokeMaterial);
+      
+      // Positioniere diese Elemente in EXTREMER Breite für vollständige Bodenabdeckung
+      floorSmoke.position.set(
+        position.x + (Math.random() * 2 - 1) * 200, // Noch breitere Verteilung
+        position.y - 10 + Math.random() * 2, // Noch tiefer, direkt am Boden
+        position.z + (Math.random() * 2 - 1) * 200 // Noch breitere Verteilung
+      );
+      
+      // Horizontale Ausrichtung
+      floorSmoke.rotation.x = -Math.PI / 2;
+      floorSmoke.rotation.z = Math.random() * Math.PI * 2;
+      
+      // Zum Rauch-Array und zur Szene hinzufügen
+      smokeElements.push({
+        mesh: floorSmoke,
+        material: floorSmokeMaterial,
+        baseY: floorSmoke.position.y,
+        speed: 0.01 + Math.random() * 0.03, // Langsamer aufsteigend
+        rotationSpeed: (Math.random() * 2 - 1) * 0.005,
+        startTime: i * 50, // Kürzere gestaffelte Startzeit
+        isFloorSmoke: true // Flag für spezielle Behandlung
+      });
+      
+      scene.add(floorSmoke);
+    }
+
+    // INTENSIVIERTE Animation des Rauchs - schnelleres Aufsteigen und stärkere Dynamik
     const startTime = Date.now();
-    const animateFog = () => {
+    const animateSmoke = () => {
       const elapsed = Date.now() - startTime;
       const progress = elapsed / duration;
       
       if (progress < 1.0) {
-        // Komplexere Nebelbewegung für unheimlicheren Effekt
-        for (let i = 0; i < particleCount; i++) {
-          // Verschiedene Frequenzen für verschiedene Partikel
-          const freq1 = 0.0005 + (i % 5) * 0.0001;
-          const freq2 = 0.0003 + (i % 7) * 0.0001;
-          const freq3 = 0.0007 + (i % 3) * 0.0001;
-          
-          // Wellenförmige Bewegung in allen drei Dimensionen
-          positions[i * 3] += Math.sin(elapsed * freq1 + i) * 0.03;
-          positions[i * 3 + 1] += Math.cos(elapsed * freq2 + i) * 0.02;
-          positions[i * 3 + 2] += Math.sin(elapsed * freq3 + i) * 0.03;
-          
-          // Leichte Drift in Richtung Spieler für ein "Verfolgungs"-Gefühl
-          if (scene.camera && Math.random() < 0.01) {
-            const toPlayer = new THREE.Vector3().subVectors(
-              scene.camera.position,
-              new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])
-            ).normalize().multiplyScalar(0.05);
+        // Animiere jeden Rauch-Puff mit dramatischeren Bewegungen
+        smokeElements.forEach(smoke => {
+          // Nur animieren, wenn Startzeit erreicht ist
+          if (elapsed > smoke.startTime) {
+            // Schnellere Aufwärtsbewegung für dynamischeren Effekt
+            if (smoke.isFloorSmoke) {
+              // Bodenrauch bleibt weiterhin niedrig, aber bewegt sich stärker horizontal
+              if (smoke.mesh.position.y < smoke.baseY + 7) { // Etwas höheres Aufsteigen erlaubt
+                smoke.mesh.position.y += smoke.speed * 0.4; // Etwas schneller
+              }
+            } else {
+              // Normaler Rauch steigt DEUTLICH schneller auf für dramatischeren Effekt
+              smoke.mesh.position.y += smoke.speed * 1.5;
+            }
             
-            positions[i * 3] += toPlayer.x;
-            positions[i * 3 + 1] += toPlayer.y;
-            positions[i * 3 + 2] += toPlayer.z;
+            // Schnellere Rotation für dynamischeren Wirbeleffekt
+            smoke.mesh.rotation.z += smoke.rotationSpeed * 1.5;
+            
+            // EXTREMES Wachstum während des Aufstiegs
+            if (smoke.isFloorSmoke) {
+              // Bodenrauch wird noch breiter für bessere Bodenabdeckung
+              const floorTargetScale = 1.4 + Math.sin(elapsed * 0.0005 + smoke.startTime) * 0.3;
+              smoke.mesh.scale.set(floorTargetScale, floorTargetScale, floorTargetScale);
+            } else {
+              // Normaler Rauch wächst EXPLOSIV beim Aufsteigen
+              const targetScale = 1.8 + (smoke.mesh.position.y - smoke.baseY) * 0.07; // DEUTLICH stärkeres Wachstum
+              smoke.mesh.scale.set(targetScale, targetScale, targetScale);
+            }
+            
+            // Billboard-Effekt: Immer zur Kamera drehen (aber nicht für Bodenrauch)
+            if (scene.camera && !smoke.isFloorSmoke) {
+              const cameraPos = scene.camera.position.clone();
+              cameraPos.y = smoke.mesh.position.y; // Nur horizontal zur Kamera drehen
+              smoke.mesh.lookAt(cameraPos);
+            }
+            
+            // MASSIV verstärkte horizontale Drift für totale Raumfüllung
+            smoke.mesh.position.x += Math.sin(elapsed * 0.001 + smoke.startTime) * 0.15; // Fast doppelte Drift
+            smoke.mesh.position.z += Math.cos(elapsed * 0.0015 + smoke.startTime) * 0.15;
+            
+            // Mehr zufällige Bewegung für chaotischeren, natürlicheren Rauch
+            if (Math.random() < 0.08) { // Häufiger zufällige Bewegungen
+              smoke.mesh.position.x += (Math.random() * 2 - 1) * 1.0; // Stärkere Zufallsbewegung
+              smoke.mesh.position.z += (Math.random() * 2 - 1) * 1.0;
+            }
+            
+            // Opazität für MAXIMALE Sichtbarkeit anpassen
+            // Viel schneller einblenden, langsamer ausblenden
+            const individualProgress = Math.min((elapsed - smoke.startTime) / 800, 1.0); // NOCH schneller volle Opazität
+            
+            if (smoke.isFloorSmoke) {
+              // Bodenrauch: Bleibt DURCHGEHEND sichtbar mit höherer Opazität
+              if (progress < 0.05) {
+                // SOFORTIGES Einblenden
+                smoke.material.opacity = individualProgress * 0.8; // Höhere Max-Opazität
+              } else if (progress > 0.9) {
+                // SEHR langsames Ausblenden am Ende
+                smoke.material.opacity = (1.0 - progress) * 8.0 * 0.8; // Viel langsamer ausblenden
+              } else {
+                // Konstante Sichtbarkeit mit stärkerer Pulsation für lebhafteren Effekt
+                const pulse = Math.sin(elapsed * 0.001 + smoke.startTime) * 0.1 + 0.95;
+                smoke.material.opacity = 0.8 * pulse * intensity / 5; // Höhere Opazität, skaliert mit intensity
+              }
+            } else {
+              // Normaler aufsteigender Rauch: MASSIV verstärkte Sichtbarkeit
+              if (progress < 0.1) {
+                // BLITZSCHNELLES Einblenden für sofortige Wirkung
+                smoke.material.opacity = individualProgress * 1.0 * intensity / 5; // Volle Opazität, skaliert mit intensity
+              } else if (progress > 0.85) {
+                // SEHR LANGSAMES Ausblenden für länger anhaltenden Effekt
+                smoke.material.opacity = (1.0 - progress) * 6.0 * intensity / 5; // Viel langsamer ausblenden
+              } else {
+                // Durchgehend hohe Sichtbarkeit mit verstärkter Pulsation
+                const pulse = Math.sin(elapsed * 0.002 + smoke.startTime) * 0.15 + 0.9;
+                smoke.material.opacity = 1.0 * individualProgress * pulse * intensity / 5; // Maximale Opazität
+              }
+            }
           }
-        }
+        });
         
-        particles.attributes.position.needsUpdate = true;
-        
-        // Opazität und Farbe über Zeit anpassen
-        if (progress < 0.2) {
-          // Einblenden
-          particleMaterial.opacity = progress * 2.5 * intensity;
-        } else if (progress > 0.7) {
-          // Ausblenden
-          particleMaterial.opacity = (1.0 - progress) * 3.3 * intensity;
-          
-          // Farbänderung gegen Ende - leicht rötlicher werden für dramatischen Effekt
-          for (let i = 0; i < particleCount; i++) {
-            const fadeProgress = (progress - 0.7) / 0.3;
-            colors[i * 3] = 0.05 + Math.random() * 0.1 + fadeProgress * 0.3; // Rot zunehmen
-            colors[i * 3 + 1] = 0.6 + Math.random() * 0.3 - fadeProgress * 0.2; // Grün abnehmen
-          }
-          particles.attributes.color.needsUpdate = true;
-        } else {
-          // Volle Intensität mit leichter Pulsation
-          const pulse = Math.sin(elapsed * 0.001) * 0.2 + 0.8;
-          particleMaterial.opacity = intensity * pulse;
-        }
-        
-        requestAnimationFrame(animateFog);
+        requestAnimationFrame(animateSmoke);
       } else {
-        // Nebel entfernen, wenn die Animation fertig ist
-        scene.remove(particleSystem);
+        // Rauch entfernen, wenn die Animation fertig ist
+        smokeElements.forEach(smoke => {
+          scene.remove(smoke.mesh);
+        });
         
-        // Sound stoppen
+        // Sound stoppen - BLEIBT UNVERÄNDERT
         fogSound.pause();
         fogSound.currentTime = 0;
       }
     };
     
     // Animation starten
-    animateFog();
+    animateSmoke();
     
-    return particleSystem;
+    // Gebe ein Objekt zurück, das später zum Entfernen verwendet werden kann
+    return {
+      cleanup: () => {
+        smokeElements.forEach(smoke => {
+          scene.remove(smoke.mesh);
+          if (smoke.material && smoke.material.map) {
+            smoke.material.map.dispose();
+          }
+          if (smoke.material) smoke.material.dispose();
+          if (smoke.mesh.geometry) smoke.mesh.geometry.dispose();
+        });
+        
+        // Sound stoppen - BLEIBT UNVERÄNDERT
+        fogSound.pause();
+        fogSound.currentTime = 0;
+      }
+    };
   }
 
   // Fügt eine kontinuierliche Schwebebewegung zum Squid hinzu
