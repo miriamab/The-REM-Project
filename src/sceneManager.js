@@ -22,8 +22,10 @@
  */
 
 import { playVideoCutscene } from './scenes/rooms/video/videoCutscene.js';
+import { setColliders } from './controls/FirstPersonControls.js';
+import { Room2 } from './scenes/rooms/room2.js';
 
-let currentRoom = null;
+// Keine lokale currentRoom-Variable mehr - wir verwenden die globale
 
 /**
  * Wechselt die Szene zu einem neuen Raum.
@@ -32,15 +34,57 @@ let currentRoom = null;
  * @param {THREE.Scene} scene - Die globale Szene
  */
 export function switchRoom(RoomClass, scene) {
+  // Verwende die globale currentRoom-Variable
+  const currentRoom = window.currentRoom;
+  
   if (currentRoom) {
     currentRoom.cleanup?.(); // optional chaining für Sicherheit
     scene.remove(currentRoom);
   }
 
-  currentRoom = new RoomClass(scene);
-  currentRoom.init();
+  const newRoom = new RoomClass(scene);
+  newRoom.init();
+  
+  // Globale currentRoom-Variable aktualisieren
+  window.currentRoom = newRoom;
+  
+  // Auch die lokale Variable in main.js aktualisieren
+  if (typeof window.updateCurrentRoom === 'function') {
+    window.updateCurrentRoom(newRoom);
+  }
 
-  return currentRoom;
+  // **WICHTIG: Alle notwendigen Initialisierungen hier durchführen**
+  // Damit sie IMMER ausgeführt werden, egal von wo switchRoom aufgerufen wird
+  
+  // 1. Colliders setzen
+  if (newRoom && newRoom.colliders) {
+    setColliders(newRoom.colliders);
+  } else {
+    console.warn('Colliders für den aktuellen Raum fehlen oder sind nicht definiert.');
+  }
+
+  // 2. Kamera an den neuen Raum übergeben
+  const camera = scene.camera || scene.children.find(obj => obj.isCamera);
+  if (newRoom && camera) {
+    newRoom.camera = camera;
+  } else {
+    console.error('Neuer Raum oder Kamera konnte nicht initialisiert werden.');
+  }
+
+  // 3. Room2-spezifische Sound-Initialisierung
+  if (newRoom instanceof Room2) {
+    const tryStartSounds = () => {
+      try {
+        newRoom.startRoom2Sounds && newRoom.startRoom2Sounds();
+      } catch (error) {
+        console.error('Fehler beim Starten der Room2-Sounds:', error);
+      }
+      document.removeEventListener('click', tryStartSounds);
+    };
+    document.addEventListener('click', tryStartSounds);
+  }
+
+  return newRoom;
 }
 
 /**
