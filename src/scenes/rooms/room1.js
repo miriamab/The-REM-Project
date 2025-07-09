@@ -275,19 +275,23 @@ blackCircle.position.set(-4.5, 2.8, 9.5); // An der Vorderwand (gegenüber der K
 blackCircle.rotation.y = Math.PI; // An die Wand ausrichten
 this.add(blackCircle);
 
-    // Glow-Effekt um den schwarzen Kreis
-const glowMaterial = new THREE.MeshBasicMaterial({
-  color: 0x000000, // Farbe des Glows (z.B. gelb)
-  transparent: true,
-  opacity: 0.5, // Leicht transparent
-});
-const glowGeometry = new THREE.CircleGeometry(4, 45); // Etwas größer als der schwarze Kreis
-const glowCircle = new THREE.Mesh(glowGeometry, glowMaterial);
+// Ring um den schwarzen Kreis (Portal.gltf)
+const gltfloader = new GLTFLoader();
+gltfloader.load('src/objects/models/room_1/Portal.gltf', (gltf) => {
+  const ring = gltf.scene;
 
-// Position und Rotation anpassen (gleiche wie der schwarze Kreis)
-glowCircle.position.set(-4.5, 2.8, 9.49); // Leicht hinter dem schwarzen Kreis
-glowCircle.rotation.y = Math.PI; // An die Wand ausrichten
-this.add(glowCircle);
+  // Skalierung anpassen (ggf. anpassen, damit der Ring den Kreis umgibt)
+  ring.scale.set(28, 28, 28);
+
+  // Position anpassen (gleiche Position wie der schwarze Kreis)
+  ring.position.set(-4.5, 2.8, 9.5);
+
+  // Rotation anpassen (falls nötig, um den Ring korrekt auszurichten)
+  ring.rotation.y = Math.PI ; // An die Wand ausrichten
+
+  // Ring zur Szene hinzufügen
+  this.add(ring);
+});
 
     // Lamp
     loader.load('src/objects/models/room_1/lamp/lamp.glb', (gltf) => {
