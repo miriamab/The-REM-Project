@@ -33,6 +33,7 @@ export class Room2 extends BaseRoom {
     this.squidChasingAnimationId = null; // ID für Verfolgungsanimation
     this.squidLight = null; // Lichteffekt für das Squid während der Verfolgung
     this.isSquidChasing = false; // Flag für aktiven Verfolgungsmodus
+    this.fallSound = null; // Referenz auf den aktuellen Fallsound
   }
 
   init() {
@@ -376,6 +377,11 @@ export class Room2 extends BaseRoom {
       // Teleportierfunktion extrahieren und an this binden
       const teleportPlayerThroughPrisonDoor = () => {
         console.log('Teleportiere zur Squid-Position...');
+        // FALLING SOUND abbrechen, falls aktiv
+        if (this.fallSound) {
+          this.fallSound.pause();
+          this.fallSound.currentTime = 0;
+        }
         const originalVelocity = window.controls ? window.controls.velocity : 0;
         if (window.controls) window.controls.velocity = 0;
         const originalFog = scene.fog ? scene.fog.clone() : new THREE.Fog(0x000000, 20, 150);
@@ -630,9 +636,13 @@ export class Room2 extends BaseRoom {
     if (window.controls) window.controls.velocity = 0;
     
     // NUR den falling.wav Sound abspielen während des Falls
-    const fallSound = new Audio('/assets/audio/falling.wav');
-    fallSound.volume = 0.4;
-    fallSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+    if (this.fallSound) {
+      this.fallSound.pause();
+      this.fallSound.currentTime = 0;
+    }
+    this.fallSound = new Audio('/assets/audio/falling.wav');
+    this.fallSound.volume = 0.4;
+    this.fallSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
     
     // Fallanimation mit exponentieller Beschleunigung
     const fallAnimation = () => {

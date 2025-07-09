@@ -2,13 +2,21 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>SOMNA – Fragebogen der Erinnerung</title>
+  <title>SOMNA – Questionnaire of memory</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preload" href="/fonts/PPSupplySans-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <style>
+    @font-face {
+      font-family: 'PPSupplySans';
+      src: url('/fonts/PPSupplySans-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
 body {
       background: #18181b url('/assets/images/menu_overlay.png') center right/180% 180% no-repeat fixed;
       color: #e0e0e0;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: 'PPSupplySans', 'Segoe UI', Arial, sans-serif;
       margin: 0;
       min-height: 100vh;
       display: flex;
@@ -142,7 +150,10 @@ body {
 </head>
 <body>
   <div class="quiz-container">
-    <div class="quiz-title">SOMNA – Memory recalibration program</div>
+    <div class="quiz-title" style="text-align:center; display:flex; flex-direction:column; align-items:center;">
+      <span style="font-size:2.5rem; font-weight:700;">SOMNA</span>
+      <span style="font-size:1.7rem; font-weight:400; margin-top:4px; letter-spacing:0.01em;">Memory recalibration program</span>
+    </div>
     <div class="quiz-sub">Please answer the electronic questionnaire to be admitted to the next phase.</div>
     <div class="quiz-progress" id="quiz-progress"></div>
     <div class="quiz-question" id="quiz-question"></div>
@@ -177,8 +188,8 @@ body {
         multi: true
       },
       {
-        question: 'Warum sind Sie hier?',
-        options: ['Um zu schlafen', 'Um zu vergessen', 'Um zu heilen'],
+        question: 'Why are you here?',
+        options: ['To sleep', 'To forget', 'To heal'],
         correct: 1,
         audio: '/assets/audio/sleep_access.mp3',
         hint: 'Secret Hint',
@@ -201,7 +212,7 @@ body {
       // Audio
       if (qdata.audio) {
         q('quiz-audio').style.display = '';
-        q('quiz-audio').innerHTML = `<button id='play-audio' style='padding:8px 18px; border-radius:6px; border:none; background:#e0e7ef; color:#222; cursor:pointer;'>Audioprotokoll abspielen</button>`;
+        q('quiz-audio').innerHTML = `<button id='play-audio' style='padding:8px 18px; border-radius:6px; border:none; background:#e0e7ef; color:#222; cursor:pointer;'>Play audio</button>`;
         document.getElementById('play-audio').onclick = () => {
           const audio = new Audio(qdata.audio);
           audio.volume = 0.9; // Lautstärke für Hinweis-/Audioprotokoll-Sound
