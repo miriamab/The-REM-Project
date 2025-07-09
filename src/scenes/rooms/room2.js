@@ -348,49 +348,54 @@ export class Room2 extends BaseRoom {
         position: new THREE.Vector3(70, 10, -100), // Position vor dem Squid (original squid: 90, 10, -135)
         lookAt: new THREE.Vector3(90, 10, -135)   // Blick in Richtung des Squids
       };
-      
+
       // Tür sichtbar machen, aber Boden ausblenden und Interaktion hinzufügen
       bloodDoor.traverse(obj => {
         if (obj.isMesh) {
           obj.visible = true;
           obj.castShadow = true;
           obj.receiveShadow = true;
-          
           // Wenn es sich um den Boden der Tür handelt, Textur transparent machen
           if (obj.name.includes('floor') || obj.name.includes('boden') || 
               (obj.position.y < -0.5 && obj.position.y > -2)) {
-            // Boden unsichtbar machen
             obj.visible = false;
           }
-          
-          // Teleport-Interaktion mit der Tür
+          // Teleport-Interaktion mit der Tür (Klick)
           registerInteractive(obj, () => {
-            console.log('Teleportiere zur Squid-Position...');
-            // Temporär Spielerkontrolle deaktivieren während der Teleportation
-            const originalVelocity = window.controls ? window.controls.velocity : 0;
-            if (window.controls) window.controls.velocity = 0;
-            // Visueller Effekt für die Teleportation - sofort dunkler Nebel (nur kurz, kein Raumnebel, keine Sounds)
-            const originalFog = scene.fog ? scene.fog.clone() : new THREE.Fog(0x000000, 20, 150);
-            scene.fog = new THREE.Fog(0x000000, 0.1, 0.2);
-            setTimeout(() => {
-              // Kamera teleportieren
-              if (scene.camera) {
-                scene.camera.position.copy(teleportDestination.position);
-                scene.camera.lookAt(teleportDestination.lookAt);
-                // KEIN Raumnebel, KEINE Sounds nach Teleport
-                setTimeout(() => {
-                  scene.fog = originalFog;
-                  if (window.controls) window.controls.velocity = originalVelocity;
-                  // Nach der Teleportation: Monster verfolgt Spieler wie zuvor
-                  if (typeof this.enableSquidChaseAfterTeleport === 'function') {
-                    this.enableSquidChaseAfterTeleport();
-                  }
-                }, 500);
-              }
-            }, 200);
+            this.teleportPlayerThroughPrisonDoor();
           });
         }
       });
+
+      // --- KOLLISIONS-TELEPORT: Spieler geht durch die Tür ---
+      // Collider für die Tür erstellen (unsichtbar, aber groß genug)
+      const doorBox = new THREE.Box3().setFromObject(bloodDoor);
+      this.prisonDoorBox = doorBox;
+      this.prisonDoorTeleportActive = true;
+
+      // Teleportierfunktion extrahieren und an this binden
+      const teleportPlayerThroughPrisonDoor = () => {
+        console.log('Teleportiere zur Squid-Position...');
+        const originalVelocity = window.controls ? window.controls.velocity : 0;
+        if (window.controls) window.controls.velocity = 0;
+        const originalFog = scene.fog ? scene.fog.clone() : new THREE.Fog(0x000000, 20, 150);
+        scene.fog = new THREE.Fog(0x000000, 0.1, 0.2);
+        setTimeout(() => {
+          if (scene.camera) {
+            scene.camera.position.copy(teleportDestination.position);
+            scene.camera.lookAt(teleportDestination.lookAt);
+            setTimeout(() => {
+              scene.fog = originalFog;
+              if (window.controls) window.controls.velocity = originalVelocity;
+              if (typeof this.enableSquidChaseAfterTeleport === 'function') {
+                this.enableSquidChaseAfterTeleport();
+              }
+            }, 500);
+          }
+        }, 200);
+      };
+      // WICHTIG: Funktion an this binden, damit update() sie aufrufen kann
+      this.teleportPlayerThroughPrisonDoor = teleportPlayerThroughPrisonDoor;
       
       // Rotes Licht an der Tür für dramatischen Effekt
       const doorLight = new THREE.PointLight(0xff0000, 2, 20);
@@ -1162,6 +1167,20 @@ export class Room2 extends BaseRoom {
 
   // Update-Funktion wird für jeden Frame aufgerufen
   update() {
+    // --- Spieler geht durch prison_door.glb: Teleport bei Kollision ---
+    if (this.prisonDoorTeleportActive && this.prisonDoorBox && this.scene.camera) {
+      const playerPosition = this.scene.camera.position.clone();
+      const playerBox = new THREE.Box3(
+        new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
+        new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
+      );
+      if (this.prisonDoorBox.intersectsBox(playerBox)) {
+        this.prisonDoorTeleportActive = false; // Nur einmal teleportieren
+        if (typeof this.teleportPlayerThroughPrisonDoor === 'function') {
+          this.teleportPlayerThroughPrisonDoor();
+        }
+      }
+    }
     if (typeof super.update === 'function') {
       super.update(); // Basisklassen-Methode aufrufen, falls vorhanden
     }
