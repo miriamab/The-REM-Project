@@ -390,10 +390,33 @@ body {
       q('quiz-next').style.display = 'none';
       q('quiz-progress').textContent = '';
       q('quiz-end').style.display = '';
-      q('quiz-end').textContent = 'Vielen Dank! Sie werden zur nächsten Phase weitergeleitet.';
+      q('quiz-end').textContent = 'Thank you! You will be redirected to the next phase.';
+      // Endscreen-Image einfügen (bleibt dauerhaft, aber Reload zeigt wieder das Quiz)
       setTimeout(() => {
-        window.location.href = '/';
+        const endImg = document.createElement('img');
+        endImg.src = '/assets/images/endscreen.jpeg';
+        endImg.alt = 'Endscreen';
+        endImg.style.position = 'fixed';
+        endImg.style.top = '50%';
+        endImg.style.left = '50%';
+        endImg.style.transform = 'translate(-50%, -50%) scale(1)';
+        endImg.style.width = '100vw';
+        endImg.style.height = '100vh';
+        endImg.style.objectFit = 'cover';
+        endImg.style.zIndex = '9999';
+        endImg.style.transition = 'transform 2.5s cubic-bezier(0.4,0,0.2,1)';
+        document.body.appendChild(endImg);
+        setTimeout(() => {
+          endImg.style.transform = 'translate(-50%, -50%) scale(1.18)';
+        }, 100);
+        // Setze ein Flag im SessionStorage, damit Reload wieder das Spiel (Startseite) zeigt
+        sessionStorage.setItem('quizEnded', '1');
       }, 2500);
+// Wenn Endscreen-Flag gesetzt ist, zurück zum Spiel-Start (wie bei http://localhost:5173/) bei Reload
+if (sessionStorage.getItem('quizEnded') === '1') {
+  sessionStorage.removeItem('quizEnded');
+  window.location.href = window.origin + '/';
+}
     }
 
     // Quiz-Hintergrundsound abspielen, sobald Seite geladen wird (mit User-Interaktion für Autoplay)

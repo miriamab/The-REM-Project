@@ -81,19 +81,64 @@ export class Room2 extends BaseRoom {
         // Speichere non-squid Objekte separat
         const gltfObjects = [
           { file: '/hospital_objects/bottles_medical.glb', pos: [120, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
+          { file: '/hospital_objects/jellyfish.glb', pos: [120, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
           { file: '/hospital_objects/hospital_asset.glb', pos: [160, 9.3, -192], scale: [0.01,0.01,0.01], rot: [0, -Math.PI/2, 0] },
           { file: '/hospital_objects/wheelchair.glb', pos: [168, -6.5, -130], scale: [0.60,0.60,0.60], rot: [0, Math.PI, 0] }
         ];
         
         // Lade alle normalen Objekte
         gltfObjects.forEach(obj => {
-          const loader = new GLTFLoader(); 
-          loader.load(obj.file, (gltf) => { 
-            const model = gltf.scene; 
-            model.position.set(...obj.pos); 
+          const loader = new GLTFLoader();
+          loader.load(obj.file, (gltf) => {
+            const model = gltf.scene;
+            model.position.set(...obj.pos);
             model.scale.set(...obj.scale);
             model.rotation.set(...obj.rot);
             model.traverse(child => { if (child.isMesh) child.visible = true; });
+            // Interaktion für bottles_medical.glb: Explosion und Entfernen
+            if (obj.file === '/hospital_objects/bottles_medical.glb' || obj.file === '/hospital_objects/medical-shot.glb') {
+              model.traverse(child => {
+                if (child.isMesh) {
+                  registerInteractive(child, () => {
+                    // Explosionseffekt: Erzeuge Partikel und entferne das Modell
+                    const explosionParticles = [];
+                    const particleCount = 32;
+                    for (let i = 0; i < particleCount; i++) {
+                      const geometry = new THREE.SphereGeometry(0.2 + Math.random() * 0.15, 6, 6);
+                      const material = new THREE.MeshBasicMaterial({ color: 0x99eaff, transparent: true, opacity: 0.8 });
+                      const particle = new THREE.Mesh(geometry, material);
+                      particle.position.copy(child.getWorldPosition(new THREE.Vector3()));
+                      this.scene.add(particle);
+                      // Zufällige Flugrichtung
+                      const dir = new THREE.Vector3(
+                        (Math.random() - 0.5) * 2,
+                        Math.random() * 2,
+                        (Math.random() - 0.5) * 2
+                      ).normalize().multiplyScalar(0.7 + Math.random() * 1.2);
+                      let t = 0;
+                      const animate = () => {
+                        t += 0.04;
+                        particle.position.addScaledVector(dir, 0.18 * (1 - t/1.5));
+                        particle.material.opacity = Math.max(0, 0.8 * (1 - t/1.5));
+                        if (t < 1.5) {
+                          requestAnimationFrame(animate);
+                        } else {
+                          this.scene.remove(particle);
+                        }
+                      };
+                      animate();
+                      explosionParticles.push(particle);
+                    }
+                    // Soundeffekt: Glas zerbricht (kein falling.wav!)
+                    const explodeSound = new Audio('/assets/audio/blubberblasen.mp3');
+                    explodeSound.volume = 0.5;
+                    explodeSound.play().catch(() => {});
+                    // Modell entfernen
+                    this.scene.remove(model);
+                  });
+                }
+              });
+            }
             this.scene.add(model);
           }, undefined, (err) => {
             console.error('FEHLER beim Laden von', obj.file, err);
@@ -472,7 +517,7 @@ export class Room2 extends BaseRoom {
     titleBox.position.set(terminalX, terminalY + 6.2, terminalZ + 0.01);
     scene.add(titleBox);
 
-    // Spritze (Quiz-Interaktion)
+    // Spritze (medical-shot.glb) mit Explosionseffekt wie bottles_medical
     const bookLoader = new GLTFLoader();
     bookLoader.load('/hospital_objects/medical-shot.glb', (gltf) => {
       const syringe = gltf.scene;
@@ -480,13 +525,50 @@ export class Room2 extends BaseRoom {
       syringe.position.set(170, 7.7, -178);
       syringe.rotation.y = Math.PI / 2;
       syringe.name = 'quiz_syringe';
-     
-      scene.add(syringe);
-    
-      registerInteractive(syringe, () => {
-        console.log('Spritze wurde geklickt! Quiz wird geöffnet...');
-        window.location.href = '/quiz.html';
+
+      // Interaktion: Explosionseffekt und Entfernen bei Klick
+      syringe.traverse(child => {
+        if (child.isMesh) {
+          registerInteractive(child, () => {
+            // Explosionseffekt: Erzeuge Partikel und entferne das Modell
+            const explosionParticles = [];
+            const particleCount = 32;
+            for (let i = 0; i < particleCount; i++) {
+              const geometry = new THREE.SphereGeometry(0.18 + Math.random() * 0.12, 6, 6);
+              const material = new THREE.MeshBasicMaterial({ color: 0x99eaff, transparent: true, opacity: 0.8 });
+              const particle = new THREE.Mesh(geometry, material);
+              particle.position.copy(child.getWorldPosition(new THREE.Vector3()));
+              this.scene.add(particle);
+              // Zufällige Flugrichtung
+              const dir = new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                Math.random() * 2,
+                (Math.random() - 0.5) * 2
+              ).normalize().multiplyScalar(0.7 + Math.random() * 1.2);
+              let t = 0;
+              const animate = () => {
+                t += 0.04;
+                particle.position.addScaledVector(dir, 0.18 * (1 - t/1.5));
+                particle.material.opacity = Math.max(0, 0.8 * (1 - t/1.5));
+                if (t < 1.5) {
+                  requestAnimationFrame(animate);
+                } else {
+                  this.scene.remove(particle);
+                }
+              };
+              animate();
+              explosionParticles.push(particle);
+            }
+            // Soundeffekt (wie bei bottles_medical): Glas zerbricht (kein falling.wav!)
+            const explodeSound = new Audio('/assets/audio/blubberblasen.mp3');
+            explodeSound.volume = 0.5;
+            explodeSound.play().catch(() => {});
+            // Modell entfernen
+            this.scene.remove(syringe);
+          });
+        }
       });
+      scene.add(syringe);
     });
     // Fallback-Button wird entfernt (nicht mehr benötigt)
 
