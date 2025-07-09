@@ -24,23 +24,14 @@ export class Room2 extends BaseRoom {
     this.soundsStarted = false;
     this._quizShowRequested = false; // Merker, falls Spritze vor Terminal geladen wird
     this._quakeTriggered = false; // Flag für Erdbeben-Trigger
-    this.quakeTriggerActive = true; // Aktiviert Beben-Trigger von Anfang an
+    this.quakeTriggerActive = false; // Wird in init aktiviert
     this._fallTriggered = false; // Flag für Fall-Trigger
     this.fallTriggerActive = true; // Wird in init aktiviert
-    this.lastTeleportTime = 0; // Zeit des letzten Teleports für Cooldown
     this.squidModel = null; // Referenz zum Squid-Modell für Animation
     this.squidFloatingAnimationId = null; // ID für Animation-Frame
     this.squidChasingAnimationId = null; // ID für Verfolgungsanimation
     this.squidLight = null; // Lichteffekt für das Squid während der Verfolgung
     this.isSquidChasing = false; // Flag für aktiven Verfolgungsmodus
-    
-    // Neue Properties für Cell-Wurf-Mechanik
-    this.cellsThrown = []; // Array für geworfene Zellen
-    this.hitCount = 0; // Zähler für Treffer am Monster
-    this.maxHits = 3; // Anzahl der Treffer zum Besiegen des Monsters
-    this.canThrowCell = true; // Flag für Cooldown zwischen Würfen
-    this.cellThrowCooldown = 1500; // Cooldown in ms
-    this.cellModel = null; // Referenz zum Cell-Modell
   }
 
   init() {
@@ -83,9 +74,7 @@ export class Room2 extends BaseRoom {
             });
           }
         });
-    
-    // Boomerang-Wand wird weiter unten im Code erstellt
-    
+
         // --- Weitere medizinische Objekte platzieren ---
         // Speichere non-squid Objekte separat
         const gltfObjects = [
@@ -127,23 +116,108 @@ export class Room2 extends BaseRoom {
               }
             } 
           });
-          
           // Squid zum Scene hinzufügen und Referenz im Room2-Objekt speichern
           this.scene.add(squidModel);
           this.squidModel = squidModel;
-          
-          // Interaktion mit dem Squid für Cell-Wurf hinzufügen
-          squidModel.traverse(child => {
+          // Interaktion: Monster kann nach Teleportation verfolgt werden und durch Klick "besiegt" werden
+          this.squidHitCount = 0;
+          this.maxSquidHits = 3;
+          // Cell-Modell laden
+          const cellLoader = new GLTFLoader();
+          cellLoader.load('/hospital_objects/cell.glb', (cellGltf) => {
+            this.cellModel = cellGltf.scene;
+            // Nach Teleportation: Squid verfolgt Spieler wie zuvor
+            this.enableSquidChaseAfterTeleport = () => {
+              this.startSquidChasing();
+            };
+            // Interaktion: Auf das Monster klicken, um 3x cell.glb zu werfen
+          // Monster-Interaktion: Nach Besiegen komplett aus Szene und Blocker entfernen
+          this.squidModel.traverse(child => {
             if (child.isMesh) {
               registerInteractive(child, () => {
-                if (this.squidModel && this.isSquidChasing && this.hitCount < this.maxHits) {
-                  console.log('Spieler hat das Monster angeklickt! Zeige Cell und feuere drei Zellen ab.');
-                  this.showCellBeforeFiring();
-                }
+                if (this.squidHitCount >= this.maxSquidHits) return;
+                // 3x cell.glb werfen (Animation)
+                const throwCell = (count) => {
+                  if (count === 0) {
+                    // Monster komplett entfernen (auch Blocker, Collider, Licht, Animationen)
+                    if (this.squidChasingAnimationId) {
+                      cancelAnimationFrame(this.squidChasingAnimationId);
+                      this.squidChasingAnimationId = null;
+                    }
+                    if (this.squidFloatingAnimationId) {
+                      cancelAnimationFrame(this.squidFloatingAnimationId);
+                      this.squidFloatingAnimationId = null;
+                    }
+                    if (this.squidLight && this.scene) {
+                      this.scene.remove(this.squidLight);
+                      this.squidLight = null;
+                    }
+                    if (this.squidModel && this.scene) {
+                      this.scene.remove(this.squidModel);
+                      this.squidModel = null;
+                    }
+                    this.isSquidChasing = false;
+                    return;
+                  }
+                  const cell = this.cellModel.clone();
+                  const camera = this.scene.camera;
+                  if (!camera) return;
+                  const dir = new THREE.Vector3();
+                  camera.getWorldDirection(dir);
+                  cell.position.copy(camera.position).add(dir.clone().multiplyScalar(2));
+                  cell.scale.set(2, 2, 2);
+                  this.scene.add(cell);
+                  // Flugrichtung
+                  const velocity = dir.clone().multiplyScalar(1.5);
+                  let frame;
+                  const animate = () => {
+                    cell.position.add(velocity);
+                    // Kollision mit Squid prüfen
+                    if (this.squidModel) {
+                      const squidBox = new THREE.Box3().setFromObject(this.squidModel);
+                      const cellBox = new THREE.Box3().setFromObject(cell);
+                      if (squidBox.intersectsBox(cellBox)) {
+                        this.squidHitCount++;
+                        this.scene.remove(cell);
+                        if (this.squidHitCount >= this.maxSquidHits) {
+                          // Monster komplett entfernen (auch Blocker, Collider, Licht, Animationen)
+                          if (this.squidChasingAnimationId) {
+                            cancelAnimationFrame(this.squidChasingAnimationId);
+                            this.squidChasingAnimationId = null;
+                          }
+                          if (this.squidFloatingAnimationId) {
+                            cancelAnimationFrame(this.squidFloatingAnimationId);
+                            this.squidFloatingAnimationId = null;
+                          }
+                          if (this.squidLight && this.scene) {
+                            this.scene.remove(this.squidLight);
+                            this.squidLight = null;
+                          }
+                          if (this.squidModel && this.scene) {
+                            this.scene.remove(this.squidModel);
+                            this.squidModel = null;
+                          }
+                          this.isSquidChasing = false;
+                          return;
+                        }
+                        setTimeout(() => throwCell(count - 1), 300);
+                        return;
+                      }
+                    }
+                    if (cell.position.distanceTo(camera.position) > 60) {
+                      this.scene.remove(cell);
+                      setTimeout(() => throwCell(count - 1), 300);
+                      return;
+                    }
+                    frame = requestAnimationFrame(animate);
+                  };
+                  animate();
+                };
+                throwCell(3);
               });
             }
           });
-          
+          });
           console.log("Squid-Modell geladen und gespeichert für Animation");
         }, undefined, (err) => {
           console.error('FEHLER beim Laden von squid.glb:', err);
@@ -201,28 +275,6 @@ export class Room2 extends BaseRoom {
       scene.camera.position.set(start.position.x, start.position.y, start.position.z);
       scene.camera.lookAt(start.lookAt.x, start.lookAt.y, start.lookAt.z);
     }
-    
-    // Erstelle die Boomerang-Wand rechts vom Startpunkt
-    const boomerangWallGeometry = new THREE.BoxGeometry(10, 30, 80);
-    const boomerangWallMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0xff0000, 
-      transparent: true, 
-      opacity: 0.1 // Fast unsichtbar, aber mit leichtem roten Schimmer für Entwicklung
-    });
-    const boomerangWall = new THREE.Mesh(boomerangWallGeometry, boomerangWallMaterial);
-    
-    // Position rechts vom Startpunkt
-    boomerangWall.position.set(start.position.x + 40, start.position.y, start.position.z);
-    boomerangWall.name = 'boomerang_wall';
-    scene.add(boomerangWall);
-    
-    console.log("Boomerang-Wand platziert bei:", boomerangWall.position);
-    
-    // Collider-basierte Erkennung für Update-Methode
-    this.boomerangWallBox = new THREE.Box3().setFromObject(boomerangWall);
-    
-    // Wand ignoriert Raycast-Interaktionen
-    boomerangWall.userData.ignoreRaycast = true;
 
   // --- Trigger-Wand für Beben im Korridor ---
     // Position: deutlich weiter links von der Startposition (X-Achse verringern)
@@ -301,57 +353,25 @@ export class Room2 extends BaseRoom {
           // Teleport-Interaktion mit der Tür
           registerInteractive(obj, () => {
             console.log('Teleportiere zur Squid-Position...');
-            
-            // Teleport-Sound abspielen (Electric Chimes)
-            const teleportSound = new Audio('/assets/audio/teleport.wav');
-            teleportSound.volume = 0.7;
-            teleportSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-            
             // Temporär Spielerkontrolle deaktivieren während der Teleportation
             const originalVelocity = window.controls ? window.controls.velocity : 0;
             if (window.controls) window.controls.velocity = 0;
-            
-            // Visueller Effekt für die Teleportation - sofort dunkler Nebel
+            // Visueller Effekt für die Teleportation - sofort dunkler Nebel (nur kurz, kein Raumnebel, keine Sounds)
             const originalFog = scene.fog ? scene.fog.clone() : new THREE.Fog(0x000000, 20, 150);
             scene.fog = new THREE.Fog(0x000000, 0.1, 0.2);
-            
-            // Teleportation mit leichter Verzögerung für besseren Sound-Effekt
             setTimeout(() => {
               // Kamera teleportieren
               if (scene.camera) {
-                // Position und Blickrichtung ändern
                 scene.camera.position.copy(teleportDestination.position);
                 scene.camera.lookAt(teleportDestination.lookAt);
-                
-                // Nach kurzer Zeit wieder zum normalen Nebel zurücksetzen und Controls wiederherstellen
+                // KEIN Raumnebel, KEINE Sounds nach Teleport
                 setTimeout(() => {
                   scene.fog = originalFog;
-                  
-                  // Spielerkontrolle wiederherstellen
                   if (window.controls) window.controls.velocity = originalVelocity;
-                  
-                  // Geisterhafte Stimme abspielen nach der Teleportation
-                  setTimeout(() => {
-                    const ghostlyVoice = new Audio('/assets/audio/after_teleport.mp3');
-                    ghostlyVoice.volume = 0.5;
-                    ghostlyVoice.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-                    
-                    // Erst türkisenen Nebel im ganzen Raum erzeugen, dann das Squid-Modell verfolgen lassen
-                    setTimeout(() => {
-                      console.log("Erzeuge türkisen Nebel vor der Squid-Animation...");
-                      
-                      // Türkiser Nebel im gesamten Raum
-                      const fogPosition = new THREE.Vector3(70, 10, -120); // Zentrum des Nebels in der Mitte des Raums
-                      const roomFog = this.createRoomFog(fogPosition, 5, 5000); // Intensiver Nebel, aber kurze Dauer
-                      
-                      // Nach dem Nebel das Squid-Modell verfolgen lassen
-                      setTimeout(() => {
-                        console.log("Starte Squid-Animation mit Verfolgungsmodus...");
-                        // Squid-Animation mit Verfolgen des Spielers
-                        this.startSquidChasing();
-                      }, 3000); // 3 Sekunden nach dem Nebelstart
-                    }, 1500);
-                  }, 1000);
+                  // Nach der Teleportation: Monster verfolgt Spieler wie zuvor
+                  if (typeof this.enableSquidChaseAfterTeleport === 'function') {
+                    this.enableSquidChaseAfterTeleport();
+                  }
                 }, 500);
               }
             }, 200);
@@ -387,33 +407,30 @@ export class Room2 extends BaseRoom {
 
 
     // 3D-Terminal-Modell laden, aber Interaktion erst nach Clipboard-Fund aktivieren
-    const terminalX = 155;
-    const terminalY = 10;
-    const terminalZ = -170;
-    
+    const terminalX = 0;
+    const terminalY = 0;
+    const terminalZ = -199.7;
     const terminalLoader = new GLTFLoader();
-    terminalLoader.load('/hospital_objects/terminal1.glb', (gltf) => {
-      const terminal = gltf.scene;
-      terminal.position.set(terminalX, terminalY, terminalZ);
-      terminal.scale.set(2, 2, 2);
-      this.scene.add(terminal);
-      
-      // Interaktion nur nach Clipboard-Fund aktivieren
-      terminal.traverse(obj => {
+    terminalLoader.load('/terminal.glb', (gltf) => {
+      const terminalModel = gltf.scene;
+      terminalModel.scale.set(0.85, 0.85, 0.85);
+      terminalModel.position.set(220, 10, -200);
+      terminalModel.rotation.y = Math.PI / 2;
+      terminalModel.name = 'quiz_terminal_model';
+      terminalModel.traverse(obj => {
+        if (obj.isMesh) {
+          obj.visible = true;
+        }
+      });
+      scene.add(terminalModel);
+      // Interaktion: Klick auf Terminal NUR wenn clipboard gefunden
+      terminalModel.traverse(obj => {
         if (obj.isMesh) {
           registerInteractive(obj, () => {
-            if (!this.terminalEnabled) {
-              console.log('Terminal kann erst nach Fund des Clipboards aktiviert werden!');
-              const audio = new Audio('/assets/audio/sleep_access.mp3');
-              audio.play();
-              return;
-            }
-            
-            console.log('Terminal aktiviert! Lade Quiz...');
-            const audio = new Audio('/assets/audio/Quiz_activatd.mp3');
-            audio.play();
-            
-            // Warten, dann Quiz öffnen
+            if (!this.terminalEnabled) return; // Erst nach Clipboard-Fund
+            console.log('Terminal wurde geklickt! Quiz wird geöffnet...');
+            const audio = new Audio('/assets/audio/quiz_activatd.mp3');
+            audio.play().catch(() => {});
             setTimeout(() => {
               window.location.href = '/quiz.html';
             }, 6000);
@@ -496,32 +513,6 @@ export class Room2 extends BaseRoom {
     // Sounds nach User-Interaktion (z.B. Klick) oder explizit nach Raumwechsel starten
     document.addEventListener('click', () => {
       this.startRoom2Sounds();
-    });
-    
-    // Cell-Modell laden für Wurf-Mechanik
-    const cellLoader = new GLTFLoader();
-    cellLoader.load('/hospital_objects/cell.glb', (gltf) => {
-      this.cellModel = gltf.scene;
-      this.cellModel.scale.set(1, 1, 1); // Standardgröße, kann angepasst werden
-      console.log("Cell-Modell für Wurf-Mechanik geladen");
-      
-      // Rechtsklick-Event für Zellwurf hinzufügen
-      document.addEventListener('contextmenu', (event) => {
-        event.preventDefault(); // Standard-Kontextmenü verhindern
-        
-        // Nur werfen, wenn das Squid-Monster aktiv ist und der Cooldown abgelaufen ist
-        if (this.squidModel && this.isSquidChasing && this.canThrowCell && this.hitCount < this.maxHits) {
-          this.throwCellAtSquid();
-          
-          // Cooldown aktivieren
-          this.canThrowCell = false;
-          setTimeout(() => {
-            this.canThrowCell = true;
-          }, this.cellThrowCooldown);
-        }
-      });
-    }, undefined, (err) => {
-      console.error('FEHLER beim Laden von cell.glb:', err);
     });
 
     this.flickerLight();
@@ -687,9 +678,11 @@ export class Room2 extends BaseRoom {
             // In Blickrichtung schauen (leicht nach vorne)
             this.scene.camera.lookAt(currentPos.x, 10, currentPos.z - 10);
             
-            // Blau-türkisen Nebel um den Spieler herum erzeugen
-            console.log("Erzeuge blau-türkisen Nebel nach dem Fall...");
-            this.createBlueFog(currentPos, 4, 20000); // Intensität 4, Dauer 20 Sekunden
+            // >>>>>>>> HIER wird der Rauch-Nebel nach dem Fallen erzeugt <<<<<<<<
+            // Türkisfarbener Rauch (kein Partikelsystem) um den Spieler herum
+            console.log("Erzeuge türkisen Rauch-Nebel nach dem Fall...");
+            this.createRoomFog(currentPos, 2.2, 18000); // Geringere Intensität für mehr Durchsichtigkeit, Dauer 18 Sekunden
+            // <<<<<<<< ENDE Rauch-Nebel nach dem Fallen <<<<<<<<
           }
           
           // Rotation zurücksetzen für normale Ansicht
@@ -810,148 +803,52 @@ export class Room2 extends BaseRoom {
   // Türkisen Nebel im gesamten Raum erzeugen (größere Reichweite als der normale Nebel)
   createRoomFog(position, intensity = 5, duration = 10000) {
     const scene = this.scene;
-    if (!scene) return;
-    
-    // Eerie Sound für den Nebel
+    if (!scene || !scene.camera) return;
+    // Sound für den Nebel (optional)
     const fogSound = new Audio('/assets/audio/things_unremembered.mp3');
     fogSound.volume = 0.3;
-    fogSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-    
-    // Erstelle ein größeres Partikelsystem für den Raum-weiten Nebel
-    const particleCount = 3000; // Mehr Partikel für dichten Nebel
-    const particles = new THREE.BufferGeometry();
-    
-    // Arrays für Partikel-Positionen und Farben
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    
-    // Nebel im gesamten Raum erzeugen
-    const radius = 100; // Viel größerer Radius als beim normalen Nebel
-    const height = 30; // Höhenverteilung
-    
-    // Für jeden Partikel
-    for (let i = 0; i < particleCount; i++) {
-      // Verteilung über den ganzen Raum mit höherer Dichte beim Squid
-      // Wir nutzen eine Mischung aus Zufallsverteilung und gezielter Platzierung
-      
-      // Entscheiden, ob der Partikel nahe am Squid oder im ganzen Raum platziert wird
-      const nearSquid = Math.random() < 0.3; // 30% der Partikel nahe am Squid
-      
-      let x, y, z;
-      
-      if (nearSquid && this.squidModel) {
-        // Nahe am Squid (mit Offset)
-        const squidPos = this.squidModel.position;
-        x = squidPos.x + (Math.random() * 2 - 1) * 20;
-        y = squidPos.y + (Math.random() * 2 - 1) * 15;
-        z = squidPos.z + (Math.random() * 2 - 1) * 20;
-      } else {
-        // Im gesamten Raum
-        x = position.x + (Math.random() * 2 - 1) * radius;
-        y = position.y + (Math.random() * 2 - 1) * height;
-        z = position.z + (Math.random() * 2 - 1) * radius;
-      }
-      
-      // Position setzen
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
-      
-      // Türkis-blaue Farbe mit Variation für unheimlichen Effekt
-      colors[i * 3] = 0.05 + Math.random() * 0.1; // Rot-Anteil (sehr niedrig)
-      colors[i * 3 + 1] = 0.6 + Math.random() * 0.3; // Grün-Anteil (höher für türkis)
-      colors[i * 3 + 2] = 0.7 + Math.random() * 0.3; // Blau-Anteil (hoch)
-    }
-    
-    // Füge Attribute zur Geometrie hinzu
-    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    
-    // Material für die Partikel - größere und transparentere Partikel
-    const particleMaterial = new THREE.PointsMaterial({
-      size: 3,
+    fogSound.play().catch(e => {});
+
+    // Großes Plane direkt vor der Kamera als Overlay
+    const geometry = new THREE.PlaneGeometry(100, 60);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00fff7, // Neon-Türkis
       transparent: true,
-      opacity: 0.4,
-      vertexColors: true,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.55,
       depthWrite: false
     });
-    
-    // Erstelle das Partikelsystem
-    const particleSystem = new THREE.Points(particles, particleMaterial);
-    particleSystem.name = 'roomFog';
-    scene.add(particleSystem);
-    
-    // Animation des Nebels - pulsierende Bewegung und langsames Verschwinden
-    const startTime = Date.now();
-    const animateFog = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = elapsed / duration;
-      
-      if (progress < 1.0) {
-        // Komplexere Nebelbewegung für unheimlicheren Effekt
-        for (let i = 0; i < particleCount; i++) {
-          // Verschiedene Frequenzen für verschiedene Partikel
-          const freq1 = 0.0005 + (i % 5) * 0.0001;
-          const freq2 = 0.0003 + (i % 7) * 0.0001;
-          const freq3 = 0.0007 + (i % 3) * 0.0001;
-          
-          // Wellenförmige Bewegung in allen drei Dimensionen
-          positions[i * 3] += Math.sin(elapsed * freq1 + i) * 0.03;
-          positions[i * 3 + 1] += Math.cos(elapsed * freq2 + i) * 0.02;
-          positions[i * 3 + 2] += Math.sin(elapsed * freq3 + i) * 0.03;
-          
-          // Leichte Drift in Richtung Spieler für ein "Verfolgungs"-Gefühl
-          if (scene.camera && Math.random() < 0.01) {
-            const toPlayer = new THREE.Vector3().subVectors(
-              scene.camera.position,
-              new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])
-            ).normalize().multiplyScalar(0.05);
-            
-            positions[i * 3] += toPlayer.x;
-            positions[i * 3 + 1] += toPlayer.y;
-            positions[i * 3 + 2] += toPlayer.z;
-          }
-        }
-        
-        particles.attributes.position.needsUpdate = true;
-        
-        // Opazität und Farbe über Zeit anpassen
-        if (progress < 0.2) {
-          // Einblenden
-          particleMaterial.opacity = progress * 2.5 * intensity;
-        } else if (progress > 0.7) {
-          // Ausblenden
-          particleMaterial.opacity = (1.0 - progress) * 3.3 * intensity;
-          
-          // Farbänderung gegen Ende - leicht rötlicher werden für dramatischen Effekt
-          for (let i = 0; i < particleCount; i++) {
-            const fadeProgress = (progress - 0.7) / 0.3;
-            colors[i * 3] = 0.05 + Math.random() * 0.1 + fadeProgress * 0.3; // Rot zunehmen
-            colors[i * 3 + 1] = 0.6 + Math.random() * 0.3 - fadeProgress * 0.2; // Grün abnehmen
-          }
-          particles.attributes.color.needsUpdate = true;
-        } else {
-          // Volle Intensität mit leichter Pulsation
-          const pulse = Math.sin(elapsed * 0.001) * 0.2 + 0.8;
-          particleMaterial.opacity = intensity * pulse;
-        }
-        
-        requestAnimationFrame(animateFog);
-      } else {
-        // Nebel entfernen, wenn die Animation fertig ist
-        scene.remove(particleSystem);
-        
-        // Sound stoppen
-        fogSound.pause();
-        fogSound.currentTime = 0;
-      }
+    const fogPlane = new THREE.Mesh(geometry, material);
+    fogPlane.name = 'neonFogOverlay';
+
+    // Positioniere das Plane immer vor der Kamera
+    const updatePlane = () => {
+      if (!scene.camera) return;
+      // 10 Einheiten vor der Kamera
+      fogPlane.position.copy(scene.camera.position);
+      const dir = new THREE.Vector3();
+      scene.camera.getWorldDirection(dir);
+      fogPlane.position.add(dir.multiplyScalar(10));
+      fogPlane.quaternion.copy(scene.camera.quaternion);
     };
-    
-    // Animation starten
-    animateFog();
-    
-    return particleSystem;
+    updatePlane();
+    scene.add(fogPlane);
+
+    // Damit das Overlay immer vor der Kamera bleibt
+    let running = true;
+    function animateOverlay() {
+      if (!running) return;
+      updatePlane();
+      requestAnimationFrame(animateOverlay);
+    }
+    animateOverlay();
+
+    // Nach Ablauf entfernen
+    setTimeout(() => {
+      running = false;
+      scene.remove(fogPlane);
+      fogSound.pause();
+      fogSound.currentTime = 0;
+    }, duration);
   }
 
   // Fügt eine kontinuierliche Schwebebewegung zum Squid hinzu
@@ -1222,20 +1119,20 @@ export class Room2 extends BaseRoom {
       }
     }
     
-    // Erstelle Box um Spieler-Position (Kamera) - etwas größer für bessere Erkennung
-    const playerPosition = this.scene.camera ? this.scene.camera.position.clone() : null;
-    const playerBox = playerPosition ? new THREE.Box3(
-      new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
-      new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
-    ) : null;
-    
-    // Debug: Zeige Position der Kamera
-    if (playerPosition && Math.random() < 0.005) { // Noch seltener loggen
-      console.log("Spieler-Position:", playerPosition);
-    }
-    
     // Prüfen, ob der Spieler die Trigger-Box für das Beben berührt
-    if (this.quakeTriggerActive && this.quakeTriggerBox && playerBox) {
+    if (this.quakeTriggerActive && this.quakeTriggerBox && this.scene.camera) {
+      // Erstelle Box um Spieler-Position (Kamera) - etwas größer für bessere Erkennung
+      const playerPosition = this.scene.camera.position.clone();
+      const playerBox = new THREE.Box3(
+        new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
+        new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
+      );
+      
+      // Debug: Zeige Position der Kamera
+      if (Math.random() < 0.005) { // Noch seltener loggen
+        console.log("Spieler-Position:", playerPosition);
+      }
+      
       // Prüfe Kollision zwischen Spieler und Trigger-Box
       if (this.quakeTriggerBox.intersectsBox(playerBox)) {
         console.log("BEBEN AUSGELÖST durch Kollision!");
@@ -1261,14 +1158,21 @@ export class Room2 extends BaseRoom {
     }
     
     // Prüfen, ob der Spieler versucht, durch die (nun unsichtbare) Barriere zu gehen
-    if (this._quakeTriggered && this.scene.camera && playerBox) {
+    if (this._quakeTriggered && this.scene.camera) {
+      const playerPosition = this.scene.camera.position.clone();
       const triggerWall = this.scene.getObjectByName('quake_trigger_wall');
       
       if (triggerWall) {
         // Erstelle eine aktualisierte Bounding Box für die Wand
         const wallBox = new THREE.Box3().setFromObject(triggerWall);
         
-        // Prüfe, ob der Spieler mit der unsichtbaren Wand kollidiert
+        // Erweiterte Box um den Spieler
+        const playerBox = new THREE.Box3(
+          new THREE.Vector3(playerPosition.x - 2, playerPosition.y - 2, playerPosition.z - 2),
+          new THREE.Vector3(playerPosition.x + 2, playerPosition.y + 2, playerPosition.z + 2)
+        );
+        
+        // Wenn der Spieler versucht, durch die Wand zu gehen (kollision)
         if (wallBox.intersectsBox(playerBox)) {
           console.log("Spieler versucht, durch die Barriere zu gehen - Boomerang zurück zum Start!");
           
@@ -1298,41 +1202,6 @@ export class Room2 extends BaseRoom {
       }
     }
     
-    // Prüfen, ob der Spieler die Boomerang-Wand berührt
-    if (this.boomerangWallBox && playerBox) {
-      // Anti-Spam-Check: Mindestens 3 Sekunden zwischen Teleportationen
-      const currentTime = Date.now();
-      const timeSinceLastTeleport = this.lastTeleportTime ? currentTime - this.lastTeleportTime : Infinity;
-      
-      if (timeSinceLastTeleport > 3000) { // 3 Sekunden Cooldown
-        // Prüfe Kollision zwischen Spieler und Boomerang-Wand
-        if (this.boomerangWallBox.intersectsBox(playerBox)) {
-          console.log("BOOMERANG-WAND BERÜHRT - Teleport zurück zum Start!");
-          
-          // Sound für Teleport
-          const teleportSound = new Audio('/assets/audio/Are_you_sure.mp3');
-          teleportSound.volume = 0.4;
-          teleportSound.play().catch(e => console.log("Teleport-Audio konnte nicht abgespielt werden:", e));
-          
-          // "Boomerang" Effekt - zurück zum Startpunkt
-          const start = START_POSITIONS.ROOM2;
-          if (this.scene.camera) {
-            this.scene.camera.position.set(start.position.x, start.position.y, start.position.z);
-            this.scene.camera.lookAt(start.lookAt.x, start.lookAt.y, start.lookAt.z);
-            console.log("Spieler teleportiert zu:", start.position);
-          }
-          
-          // Flag setzen, damit wir den Teleport nicht mehrfach hintereinander auslösen
-          this.lastTeleportTime = currentTime;
-          
-          // Kurzer Kamera-Shake für den Teleport-Effekt
-          setTimeout(() => {
-            this.shakeCamera(0.5, 300);
-          }, 100);
-        }
-      }
-    }
-
     // Prüfen, ob der Spieler die Fall-Trigger-Box berührt
     if (this.fallTriggerActive && this.fallTriggerBox && this.scene.camera && !this._fallTriggered) {
       // Erstelle Box um Spieler-Position (Kamera)
@@ -1394,6 +1263,7 @@ export class Room2 extends BaseRoom {
       this.scene.remove(this.squidLight);
       this.squidLight = null;
     }
+    
     // Flag für Verfolgung zurücksetzen
     this.isSquidChasing = false;
     
@@ -1406,426 +1276,10 @@ export class Room2 extends BaseRoom {
       });
     }
     
-    // Geworfene Zellen aus der Szene entfernen
-    this.cellsThrown.forEach(cell => {
-      if (cell && this.scene) {
-        this.scene.remove(cell);
-      }
-    });
-    this.cellsThrown = [];
-    
     // Basisklassen-Methode aufrufen, falls vorhanden
     if (typeof super.dispose === 'function') {
       super.dispose();
     }
   }
-  
-  // Zeigt die Zelle vor dem Spieler an, bevor die drei Zellen auf das Monster gefeuert werden
-  showCellBeforeFiring() {
-    if (!this.cellModel || !this.scene.camera) return;
-    
-    // Sound für das Erscheinen der Zelle
-    const appearSound = new Audio('/assets/audio/cell_appear.wav');
-    appearSound.volume = 0.4;
-    appearSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-    
-    // Zelle klonen
-    const cell = this.cellModel.clone();
-    
-    // Position vor dem Spieler (ca. 3 Einheiten vor der Kamera)
-    const cameraDirection = new THREE.Vector3();
-    this.scene.camera.getWorldDirection(cameraDirection);
-    
-    const cellPosition = new THREE.Vector3().copy(this.scene.camera.position)
-      .add(cameraDirection.multiplyScalar(3));
-    
-    cell.position.copy(cellPosition);
-    cell.scale.set(5, 5, 5); // Größere Darstellung für bessere Sichtbarkeit
-    
-    // Zur Szene hinzufügen
-    this.scene.add(cell);
-    
-    // Leuchtendes Material für bessere Sichtbarkeit
-    cell.traverse(obj => {
-      if (obj.isMesh && obj.material) {
-        obj.material.emissive = new THREE.Color(0.1, 0.6, 0.3);
-        obj.material.emissiveIntensity = 0.5;
-      }
-    });
-    
-    // Zelle rotieren lassen für besseren visuellen Effekt
-    const startTime = Date.now();
-    let rotationFrame;
-    
-    const rotateCell = () => {
-      const elapsed = Date.now() - startTime;
-      
-      // Rotation der Zelle
-      cell.rotation.y += 0.05;
-      cell.rotation.x += 0.01;
-      
-      // Pulsierende Größe
-      const scale = 5 + Math.sin(elapsed * 0.01) * 0.5;
-      cell.scale.set(scale, scale, scale);
-      
-      if (elapsed < 1500) {
-        rotationFrame = requestAnimationFrame(rotateCell);
-      } else {
-        // Animation stoppen
-        cancelAnimationFrame(rotationFrame);
-        
-        // Zelle aus der Szene entfernen
-        this.scene.remove(cell);
-        
-        // Drei Zellen automatisch auf das Monster abfeuern
-        this.fireMultipleCellsAtSquid(3);
-      }
-    };
-    
-    // Animation starten
-    rotateCell();
-  }
-  
-  // Feuert mehrere Zellen auf das Monster ab (garantierte Treffer)
-  fireMultipleCellsAtSquid(count = 3) {
-    if (!this.cellModel || !this.squidModel || !this.scene.camera) return;
-    
-    // Sicherstellen, dass wir nur bis maxHits Zellen abfeuern
-    const remainingHits = this.maxHits - this.hitCount;
-    const actualCount = Math.min(count, remainingHits);
-    
-    if (actualCount <= 0) return;
-    
-    // Sound für Zellabschuss
-    const fireSound = new Audio('/assets/audio/cell_fire.wav');
-    fireSound.volume = 0.5;
-    fireSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-    
-    // Zeitversetzt mehrere Zellen abfeuern
-    for (let i = 0; i < actualCount; i++) {
-      setTimeout(() => {
-        this.throwCellAtSquid(true); // true = garantierter Treffer
-      }, i * 800); // 0.8 Sekunden Verzögerung zwischen den Würfen
-    }
-  }
-  
-  // Wirft eine Zelle auf das Monster
-  throwCellAtSquid(guaranteedHit = false) {
-    if (!this.cellModel || !this.squidModel || !this.scene.camera) return;
-    
-    // Klon des Cell-Modells erstellen
-    const cell = this.cellModel.clone();
-    
-    // Startposition der Zelle (vor dem Spieler)
-    const cameraDirection = new THREE.Vector3();
-    this.scene.camera.getWorldDirection(cameraDirection);
-    
-    const cellPosition = new THREE.Vector3().copy(this.scene.camera.position)
-      .add(cameraDirection.multiplyScalar(2));
-    
-    cell.position.copy(cellPosition);
-    cell.scale.set(2, 2, 2); // Angepasste Größe für den Wurf
-    
-    // Zur Szene hinzufügen
-    this.scene.add(cell);
-    this.cellsThrown.push(cell);
-    
-    // Sound für den Wurf
-    const throwSound = new Audio('/assets/audio/electric-chimes.wav');
-    throwSound.volume = 0.3;
-    throwSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-    
-    // Flugrichtung: Bei guaranteedHit direkt zum Monster, sonst in Blickrichtung
-    let targetPosition;
-    let direction;
-    
-    if (guaranteedHit) {
-      // Ziel ist das Monster (garantierter Treffer)
-      targetPosition = this.squidModel.position.clone();
-      direction = new THREE.Vector3().subVectors(targetPosition, cellPosition).normalize();
-    } else {
-      // Ziel ist in Blickrichtung des Spielers
-      direction = cameraDirection.clone();
-      targetPosition = null;
-    }
-    
-    // Geschwindigkeit der Zelle
-    const speed = guaranteedHit ? 0.7 : 1.2;
-    
-    // Flugeigenschaften speichern
-    cell.userData.direction = direction;
-    cell.userData.speed = speed;
-    cell.userData.distanceTraveled = 0;
-    cell.userData.maxDistance = 150; // Maximale Flugdistanz
-    cell.userData.guaranteedHit = guaranteedHit;
-    cell.userData.target = targetPosition;
-    
-    // Zelle während des Fluges leuchten lassen
-    cell.traverse(obj => {
-      if (obj.isMesh && obj.material) {
-        obj.material.emissive = new THREE.Color(0.1, 0.6, 0.3);
-        obj.material.emissiveIntensity = 0.5;
-      }
-    });
-    
-    // Animation für den Zellwurf
-    const animateCell = () => {
-      if (!cell.parent) return; // Cell wurde bereits entfernt
-      
-      if (cell.userData.guaranteedHit && cell.userData.target) {
-        // Aktualisierte Richtung zum Monster (für garantierte Treffer)
-        direction = new THREE.Vector3().subVectors(cell.userData.target, cell.position).normalize();
-        cell.position.add(direction.multiplyScalar(cell.userData.speed));
-      } else {
-        // Gerade Flugbahn in ursprünglicher Richtung
-        cell.position.add(cell.userData.direction.clone().multiplyScalar(cell.userData.speed));
-      }
-      
-      // Zelle rotieren für coolen Effekt
-      cell.rotation.x += 0.05;
-      cell.rotation.z += 0.05;
-      
-      // Zurückgelegte Distanz erhöhen
-      cell.userData.distanceTraveled += cell.userData.speed;
-      
-      // Kollisionsprüfung
-      this.checkCellCollisions(cell);
-      
-      // Wenn die maximale Distanz erreicht ist und kein garantierter Treffer, entfernen
-      if (!cell.userData.guaranteedHit && cell.userData.distanceTraveled > cell.userData.maxDistance) {
-        this.scene.remove(cell);
-        this.cellsThrown = this.cellsThrown.filter(c => c !== cell);
-        return;
-      }
-      
-      // Nächster Frame
-      cell.userData.animationFrame = requestAnimationFrame(animateCell);
-    };
-    
-    // Animation starten
-    cell.userData.animationFrame = requestAnimationFrame(animateCell);
-  }
-  
-  // Prüft Kollisionen zwischen Zellen und dem Monster
-  checkCellCollisions(cell) {
-    if (!cell || !this.squidModel || this.hitCount >= this.maxHits) return;
-    
-    // Bounding Box für Zelle und Monster
-    const cellBox = new THREE.Box3().setFromObject(cell);
-    const squidBox = new THREE.Box3().setFromObject(this.squidModel);
-    
-    // Bei garantiertem Treffer: Prüfen, ob die Zelle nahe genug am Monster ist
-    const isNearEnough = cell.userData.guaranteedHit && 
-      cell.position.distanceTo(this.squidModel.position) < 5;
-    
-    // Kollision erkannt oder garantierter Treffer in der Nähe
-    if (cellBox.intersectsBox(squidBox) || isNearEnough) {
-      // Treffer! Zelle entfernen
-      this.scene.remove(cell);
-      this.cellsThrown = this.cellsThrown.filter(c => c !== cell);
-      
-      if (cell.userData.animationFrame) {
-        cancelAnimationFrame(cell.userData.animationFrame);
-      }
-      
-      // Treffer-Sound
-      const hitSound = new Audio('/assets/audio/3_Bubbles_burst.mp3');
-      hitSound.volume = 0.5;
-      hitSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-      
-      // Hit-Effekt am Squid (blau-türkiser Flash)
-      this.createSquidHitEffect();
-      
-      // Treffer zählen
-      this.hitCount++;
-      console.log(`Treffer! ${this.hitCount}/${this.maxHits}`);
-      
-      // Wenn maximale Anzahl an Treffern erreicht, Monster verschwinden lassen
-      if (this.hitCount >= this.maxHits) {
-        this.defeatSquidMonster();
-      } else {
-        // Monster "verletzt" aussehen lassen
-        this.squidModel.traverse(child => {
-          if (child.isMesh && child.material) {
-            // Farbe ändert sich mit jedem Treffer
-            const damage = this.hitCount / this.maxHits;
-            child.material.emissive = new THREE.Color(0.5 * damage, 0.2, 0.3);
-          }
-        });
-        
-        // Monster kurz aufleuchten lassen
-        const originalIntensity = this.squidLight ? this.squidLight.intensity : 1;
-        if (this.squidLight) {
-          this.squidLight.intensity = 2;
-          setTimeout(() => {
-            if (this.squidLight) this.squidLight.intensity = originalIntensity;
-          }, 200);
-        }
-      }
-    }
-  }
-  
-  // Erzeugt einen Treffer-Effekt am Monster
-  createSquidHitEffect() {
-    if (!this.squidModel || !this.scene) return;
-    
-    // Position des Monsters
-    const position = this.squidModel.position.clone();
-    
-    // Erstelle ein Partikelsystem für den Effekt
-    const particleCount = 100;
-    const particles = new THREE.BufferGeometry();
-    
-    // Arrays für Partikel-Positionen und Farben
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    
-    // Für jeden Partikel
-    for (let i = 0; i < particleCount; i++) {
-      // Zufällige Position um das Monster
-      const radius = 5;
-      positions[i * 3] = position.x + (Math.random() * 2 - 1) * radius;
-      positions[i * 3 + 1] = position.y + (Math.random() * 2 - 1) * radius;
-      positions[i * 3 + 2] = position.z + (Math.random() * 2 - 1) * radius;
-      
-      // Blau-grüne Farbe
-      colors[i * 3] = 0.1;
-      colors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
-      colors[i * 3 + 2] = 0.8 + Math.random() * 0.2;
-    }
-    
-    // Füge Attribute zur Geometrie hinzu
-    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    
-    // Material für die Partikel
-    const particleMaterial = new THREE.PointsMaterial({
-      size: 0.5,
-      transparent: true,
-      opacity: 0.7,
-      vertexColors: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    
-    // Erstelle das Partikelsystem
-    const particleSystem = new THREE.Points(particles, particleMaterial);
-    this.scene.add(particleSystem);
-    
-    // Animation für die Partikel
-    const startTime = Date.now();
-    const duration = 500;
-    
-    const animateParticles = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = elapsed / duration;
-      
-      if (progress < 1.0) {
-        // Partikel bewegen sich nach außen
-        for (let i = 0; i < particleCount; i++) {
-          const direction = new THREE.Vector3(
-            positions[i * 3] - position.x,
-            positions[i * 3 + 1] - position.y,
-            positions[i * 3 + 2] - position.z
-          ).normalize();
-          
-          const speed = 0.1 * progress;
-          
-          positions[i * 3] += direction.x * speed;
-          positions[i * 3 + 1] += direction.y * speed;
-          positions[i * 3 + 2] += direction.z * speed;
-        }
-        
-        particles.attributes.position.needsUpdate = true;
-        
-        // Transparenz mit der Zeit reduzieren
-        particleMaterial.opacity = 0.7 * (1 - progress);
-        
-        requestAnimationFrame(animateParticles);
-      } else {
-        // Partikel entfernen
-        this.scene.remove(particleSystem);
-      }
-    };
-    
-    // Animation starten
-    animateParticles();
-  }
-  
-  // Lässt das Monster nach dem dritten Treffer verschwinden
-  defeatSquidMonster() {
-    if (!this.squidModel || !this.scene) return;
-    
-    // Sound für das Verschwinden des Monsters
-    const defeatSound = new Audio('/assets/audio/4_Theyre_gone.mp3');
-    defeatSound.volume = 0.7;
-    defeatSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-    
-    // Verfolgungsanimation stoppen
-    this.isSquidChasing = false;
-    
-    if (this.squidChasingAnimationId) {
-      cancelAnimationFrame(this.squidChasingAnimationId);
-      this.squidChasingAnimationId = null;
-    }
-    
-    // Monster stärker leuchten lassen und dann verschwinden
-    this.squidModel.traverse(child => {
-      if (child.isMesh && child.material) {
-        child.material.emissive = new THREE.Color(0.1, 0.8, 0.9);
-        child.material.emissiveIntensity = 2;
-      }
-    });
-    
-    if (this.squidLight) {
-      this.squidLight.intensity = 3;
-      this.squidLight.color.set(0x00ffff);
-    }
-    
-    // Monster-Auflösungsanimation
-    const startTime = Date.now();
-    const duration = 2000;
-    
-    const dissolveMonster = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = elapsed / duration;
-      
-      if (progress < 1.0) {
-        // Monster schrumpfen und drehen
-        this.squidModel.scale.set(
-          19 * (1 - progress),
-          19 * (1 - progress),
-          19 * (1 - progress)
-        );
-        
-        this.squidModel.rotation.y += 0.05;
-        
-        // Lichtstärke anpassen
-        if (this.squidLight) {
-          this.squidLight.intensity = 3 * (1 - progress);
-        }
-        
-        // Nächster Frame
-        requestAnimationFrame(dissolveMonster);
-      } else {
-        // Monster und Licht vollständig entfernen
-        this.scene.remove(this.squidModel);
-        
-        if (this.squidLight) {
-          this.scene.remove(this.squidLight);
-          this.squidLight = null;
-        }
-        
-        // Erfolgs-Sound nach dem Verschwinden
-        setTimeout(() => {
-          const successSound = new Audio('/assets/audio/5_Well_done.mp3');
-          successSound.volume = 0.7;
-          successSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
-        }, 1000);
-      }
-    };
-    
-    // Animation starten
-    dissolveMonster();
-  }
+
 }
