@@ -98,7 +98,7 @@ export class Room1 extends BaseRoom {
     const textureLoader = new THREE.TextureLoader();
     const wallTexture = textureLoader.load('assets/images/wall1.png');
     const floorTexture = textureLoader.load('assets/images/floor1.jpg');
-    const ceilingTexture = textureLoader.load('assets/images/floor1.jpg');
+    const ceilingTexture = textureLoader.load('assets/images/decke1.jpg');
 
     const loader = new GLTFLoader();
 
@@ -121,6 +121,61 @@ export class Room1 extends BaseRoom {
     floor.rotation.x = Math.PI / 2;
     floor.position.y = 0.01;
     this.add(floor);
+
+    // Fußbodenleiste (Sockelleiste) 
+const baseboardMaterial = new THREE.MeshStandardMaterial({ color: 0x8a7457 }); // hellgrau, ggf. Textur
+const baseboardHeight = 0.12;
+const baseboardDepth = 0.08;
+const baseboardY = baseboardHeight / 2 + 0.01; // knapp über dem Boden
+const baseboardOffset = 0.26;
+
+// Rückwand (leiste)
+const baseboardBack = new THREE.Mesh(new THREE.BoxGeometry(20, baseboardHeight, baseboardDepth), baseboardMaterial);
+baseboardBack.position.set(0, baseboardY, -10 + baseboardDepth / 2 + baseboardOffset);
+this.add(baseboardBack);
+
+// Vorderwand (leiste)
+const baseboardFront = new THREE.Mesh(new THREE.BoxGeometry(20, baseboardHeight, baseboardDepth), baseboardMaterial);
+baseboardFront.position.set(0, baseboardY, 10 - baseboardDepth / 2 - baseboardOffset);
+this.add(baseboardFront);
+
+// Linke Wand (leiste)
+const baseboardLeft = new THREE.Mesh(new THREE.BoxGeometry(baseboardDepth, baseboardHeight, 20), baseboardMaterial);
+baseboardLeft.position.set(-10 + baseboardDepth / 2 + baseboardOffset, baseboardY, 0);
+this.add(baseboardLeft);
+
+// Rechte Wand (leiste)
+const baseboardRight = new THREE.Mesh(new THREE.BoxGeometry(baseboardDepth, baseboardHeight, 20), baseboardMaterial);
+baseboardRight.position.set(10 - baseboardDepth / 2 - baseboardOffset, baseboardY, 0);
+this.add(baseboardRight);
+
+// Deckenleiste (Stuckleiste)
+const crownMaterial = new THREE.MeshStandardMaterial({ color: 0x8a7457 }); // z.B. cremeweiß, ggf. Textur
+const crownHeight = 0.12;
+const crownDepth = 0.08; // genauso schmal wie die Fußleiste
+const crownY = 9 - crownHeight / 2; // knapp unter der Decke (Decke ist bei y=9)
+const crownOffset = 0.26; // analog zur Fußleiste
+
+// Rückwand (leiste decke)
+const crownBack = new THREE.Mesh(new THREE.BoxGeometry(20, crownHeight, crownDepth), crownMaterial);
+crownBack.position.set(0, crownY, -10 + crownDepth / 2 + crownOffset);
+this.add(crownBack);
+
+// Vorderwand (leiste decke)
+const crownFront = new THREE.Mesh(new THREE.BoxGeometry(20, crownHeight, crownDepth), crownMaterial);
+crownFront.position.set(0, crownY, 10 - crownDepth / 2 - crownOffset);
+this.add(crownFront);
+
+// Linke Wand (leiste decke)
+const crownLeft = new THREE.Mesh(new THREE.BoxGeometry(crownDepth, crownHeight, 20), crownMaterial);
+crownLeft.position.set(-10 + crownDepth / 2 + crownOffset, crownY, 0);
+this.add(crownLeft);
+
+// Rechte Wand (leiste decke)
+const crownRight = new THREE.Mesh(new THREE.BoxGeometry(crownDepth, crownHeight, 20), crownMaterial);
+crownRight.position.set(10 - crownDepth / 2 - crownOffset, crownY, 0);
+this.add(crownRight);
+
 
     // Sichtbare Wände (mit Textur)
 const visibleWallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture, side: THREE.DoubleSide });
@@ -210,6 +265,68 @@ this.colliders.push(colliderRightWall);
       this.radioLock = makeRadioInteractive(radio, 'assets/audio/radio-music.mp3', this);
     });
 
+    // Schwarzes Rechteck an der Wand (Schatten einer Tür)
+    const blackRectangleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Schwarz
+    const blackRectangleGeometry = new THREE.PlaneGeometry(3, 8, 1); // Breite und Höhe des Rechtecks
+    const blackRectangle = new THREE.Mesh(blackRectangleGeometry, blackRectangleMaterial);
+    blackRectangle.visible = false; // Unsichtbar machen
+    blackRectangle.position.set(-4.5, 2.8, 9.5); // An der Vorderwand (gegenüber der Kommode)
+    blackRectangle.rotation.y = Math.PI; // An die Wand ausrichten
+    blackRectangle.name = 'blackRectangle'; // WICHTIG: Name setzen für getObjectByName
+    this.scene.add(blackRectangle);
+    
+
+// Rose
+loader.load('src/objects/models/room_1/rose.glb', (gltf) => {
+  const rose = gltf.scene;
+
+  rose.scale.set(1, 1, 1);
+
+  rose.position.set(0, -2, 0); // X = 0, Y = leicht über dem Boden, Z = 0
+
+  // Rotation (falls nötig)
+  rose.rotation.y = 0; // Keine Rotation, zeigt nach vorne
+
+  // Blume zur Szene hinzufügen
+  this.add(rose);
+  this.rose = rose;
+});
+
+// Schlüssel über der Rose
+loader.load('src/objects/models/room_1/key.glb', (gltf) => {
+  const key = gltf.scene;
+
+  // Skalierung anpassen (ggf. anpassen, damit der Schlüssel die richtige Größe hat)
+  key.scale.set(1, 1, 1);
+
+  // Position über der Rose
+  key.position.set(0, -2, 0); // X = 0, Y = 1.5 (über der Rose), Z = 0
+
+  // Rotation (falls nötig)
+  key.rotation.y = 0; // Keine Rotation, zeigt nach vorne
+
+  // Schlüssel zur Szene hinzufügen
+  this.add(key);
+  this.key = key;
+
+  // Animation für langsame Rotation
+  function animateKeyRotation() {
+    key.rotation.y += 0.01; // Langsame Drehung um die Y-Achse
+    requestAnimationFrame(animateKeyRotation); // Nächsten Frame anfordern
+  }
+  animateKeyRotation(); // Animation starten
+
+  // Schlüssel interaktiv machen
+key.traverse(child => {
+  if (child.isMesh) {
+    registerInteractive(child, () => {
+      // Schwarzes Rechteck sichtbar machen
+     this.onSolved();
+    });
+  }
+});
+});
+
     // Lamp
     loader.load('src/objects/models/room_1/lamp/lamp.glb', (gltf) => {
       const lamp = gltf.scene;
@@ -267,7 +384,6 @@ this.colliders.push(colliderRightWall);
     });
 
 
-
     // Tassen
     loader.load('src/objects/models/room_1/soviet_mug.glb', (gltf) => {
       const mug = gltf.scene;
@@ -278,39 +394,10 @@ this.colliders.push(colliderRightWall);
       this.colliders.push(mug);
     });
 
-
-/** 
-    // Blubberblasen Rätsel
-  const blubber = createBlubberblasen(this.scene);
-  this.animateBlubberblasen = blubber.animate;
-  this.bubbles = blubber.bubbleArray;
-
-  this.bubbles.forEach(bubble => {
-  registerInteractive(bubble, (hit) => {
-    this.scene.remove(hit);
-    hit.userData.removed = true;
-
-    // Effekt anzeigen
-    spawnBubbleEffect(this.scene, hit.position);
-
-    // Wenn keine Blasen mehr da sind: Nebel und Licht!
-    if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
-      triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
-
-      // Button und Teddy erst nach kurzer Verzögerung (nach Licht-Übergang) anzeigen:
-      setTimeout(() => {
-        this.spawnTeddyAndButton();
-      }, 2200);
-    }
-    });
-});
-*/
-
-
  // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
     setTimeout(() => {
       playNarratorClip('eins');
-    }, 25000); // 25 Sekunden
+    }, 5000); // 25 Sekunden
 
 
 const quallenTexture = textureLoader.load('assets/images/quallen.png');
@@ -422,7 +509,17 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
     somnaFloorMesh.rotation.z = Math.PI; // um 180° drehen
     this.add(somnaFloorMesh);
 
-   
+   // Hintergrundmusik im Raum abspielen
+const backgroundMusic = new Audio('assets/audio/spooky_sound.mp3');
+backgroundMusic.loop = true; // Musik wiederholen
+backgroundMusic.volume = 0.5; // Lautstärke anpassen
+backgroundMusic.play(); // Musik starten
+
+
+if (!this.camera || !this.camera.position) {
+  console.error('Kamera ist nicht korrekt initialisiert!');
+  return;
+}
 
   } // Ende init
 
@@ -434,10 +531,25 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
 
   // Wird aufgerufen, wenn Raum 1 abgeschlossen ist
   onSolved() {
-    playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
-      this.switchToRoom2();
+  const blackRectangle = this.scene.getObjectByName('blackRectangle');
+  if (blackRectangle) {
+    blackRectangle.visible = true; // Tür sichtbar machen
+
+    // Interaktivität für die Tür registrieren
+    blackRectangle.traverse(child => {
+      if (child.isMesh) {
+        registerInteractive(child, () => {
+          playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
+            this.switchToRoom2(); // Raumwechsel ausführen
+          });
+        });
+      }
     });
+  } else {
+    console.error('Schwarzes Rechteck nicht gefunden!');
   }
+}
+
 
   spawnTeddyAndButton() {
     const loader = new GLTFLoader();
@@ -458,9 +570,8 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
             if (!this.bloodStarted) return;
             const bloodPool = this.scene.getObjectByName('bloodPool');
             if (!bloodPool) return;
-            playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
-              this.switchToRoom2();
-            });
+            
+            playNarratorClip('sechs');
           });
         }
       });
@@ -481,7 +592,7 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
               this.bloodStarted = true;
               playNarratorClip('fuenf'); // Audio fuenf abspielen, wenn Teddy zu bluten beginnt
               startBloodFountain(this.scene, this.teddyPosition);
-              startBloodPool(this.scene, this.teddyPosition);
+              startBloodPool(this.scene, this.teddyPosition, this.rose, this.key);
               // Bear-Sound nach 5 Sekunden abspielen
               setTimeout(() => {
                 const bearSound = new Audio('assets/audio/bear-sound.wav');
