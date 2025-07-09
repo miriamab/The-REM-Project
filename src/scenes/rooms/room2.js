@@ -28,6 +28,7 @@ export class Room2 extends BaseRoom {
     this._fallTriggered = false; // Flag für Fall-Trigger
     this.fallTriggerActive = true; // Wird in init aktiviert
     this.squidModel = null; // Referenz zum Squid-Modell für Animation
+    this.squidChaseSound = null; // Instanz des Monster-Sounds
     this.squidFloatingAnimationId = null; // ID für Animation-Frame
     this.squidChasingAnimationId = null; // ID für Verfolgungsanimation
     this.squidLight = null; // Lichteffekt für das Squid während der Verfolgung
@@ -156,6 +157,12 @@ export class Room2 extends BaseRoom {
                       this.scene.remove(this.squidModel);
                       this.squidModel = null;
                     }
+                    // Monster-Sound stoppen
+                    if (this.squidChaseSound) {
+                      this.squidChaseSound.pause();
+                      this.squidChaseSound.currentTime = 0;
+                      this.squidChaseSound = null;
+                    }
                     this.isSquidChasing = false;
                     return;
                   }
@@ -196,6 +203,12 @@ export class Room2 extends BaseRoom {
                           if (this.squidModel && this.scene) {
                             this.scene.remove(this.squidModel);
                             this.squidModel = null;
+                          }
+                          // Monster-Sound stoppen
+                          if (this.squidChaseSound) {
+                            this.squidChaseSound.pause();
+                            this.squidChaseSound.currentTime = 0;
+                            this.squidChaseSound = null;
                           }
                           this.isSquidChasing = false;
                           return;
@@ -447,20 +460,6 @@ export class Room2 extends BaseRoom {
     const titleBox = new THREE.Mesh(titleBoxGeometry, titleBoxMaterial);
     titleBox.position.set(terminalX, terminalY + 6.2, terminalZ + 0.01);
     scene.add(titleBox);
-
-    const fontLoader = new FontLoader();
-    fontLoader.load('/fonts/helvetiker_regular.typeface.json', (font) => {
-      const textGeo = new TextGeometry('SOMNA Terminal', {
-        font,
-        size: 0.55,
-        height: 0.12,
-      });
-      const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const textMesh = new THREE.Mesh(textGeo, textMat);
-      textMesh.position.set(terminalX - 4.1, terminalY + 4.2 - 0.35, terminalZ + 0.04);
-      textMesh.rotation.y = 0;
-      scene.add(textMesh);
-    });
 
     // Spritze (Quiz-Interaktion)
     const bookLoader = new GLTFLoader();
@@ -886,10 +885,15 @@ export class Room2 extends BaseRoom {
     }
     
     // Sound für die Verfolgung des Squids abspielen
-    const chaseSound = new Audio('/assets/audio/bear-sound.wav');
-    chaseSound.volume = 0.5;
-    chaseSound.loop = true;
-    chaseSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+    // Vorherigen Sound stoppen, falls noch einer läuft
+    if (this.squidChaseSound) {
+      this.squidChaseSound.pause();
+      this.squidChaseSound.currentTime = 0;
+    }
+    this.squidChaseSound = new Audio('/assets/audio/monster-groan.mp3');
+    this.squidChaseSound.volume = 0.5;
+    this.squidChaseSound.loop = true;
+    this.squidChaseSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
     
     // Verfolgungs-Parameter
     const speed = 0.04; // Geschwindigkeit der Verfolgung
@@ -927,8 +931,11 @@ export class Room2 extends BaseRoom {
     const chasePlayer = () => {
       if (!this.isSquidChasing || !this.squidModel || !this.scene.camera) {
         // Animation beenden, wenn sie gestoppt wurde
-        chaseSound.pause();
-        chaseSound.currentTime = 0;
+        if (this.squidChaseSound) {
+          this.squidChaseSound.pause();
+          this.squidChaseSound.currentTime = 0;
+          this.squidChaseSound = null;
+        }
         return;
       }
       
@@ -969,7 +976,7 @@ export class Room2 extends BaseRoom {
         
         // Soundeffekt-Lautstärke basierend auf Entfernung
         const volume = Math.max(0.1, Math.min(0.8, 1 - (distanceToPlayer / 100)));
-        chaseSound.volume = volume;
+        if (this.squidChaseSound) this.squidChaseSound.volume = volume;
       } else {
         // Wenn Mindestabstand erreicht, leichte Schwebeanimation
         this.squidModel.position.y += Math.sin(elapsed * 0.003) * 0.1;
