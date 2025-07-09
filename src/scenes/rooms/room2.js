@@ -626,7 +626,7 @@ export class Room2 extends BaseRoom {
     
     // NUR den falling.wav Sound abspielen während des Falls
     const fallSound = new Audio('/assets/audio/falling.wav');
-    fallSound.volume = 0.7;
+    fallSound.volume = 0.4;
     fallSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
     
     // Fallanimation mit exponentieller Beschleunigung
@@ -665,37 +665,28 @@ export class Room2 extends BaseRoom {
         // Leichter Aufprall-Effekt
         this.shakeCamera(2.0, 300);
         
-        // Nach kurzer Pause Kontrolle wiederherstellen und auf dem Boden des Hospitals bleiben
-        setTimeout(() => {
-          // Statt zur Startposition zurückzukehren, bleiben wir am aktuellen Ort auf dem Boden
-          // Wir behalten die X/Z Position, aber setzen Y auf das Floor-Level (5)
-          if (this.scene.camera) {
-            // X und Z Koordinaten beibehalten, nur Y auf höhere Bodenhöhe setzen
-            const currentPos = this.scene.camera.position;
-            this.scene.camera.position.set(currentPos.x, 10, currentPos.z);
-            
-            // In Blickrichtung schauen (leicht nach vorne)
-            this.scene.camera.lookAt(currentPos.x, 10, currentPos.z - 10);
-            
-            // >>>>>>>> HIER wird der Rauch-Nebel nach dem Fallen erzeugt <<<<<<<<
-            // Türkisfarbener Rauch (kein Partikelsystem) um den Spieler herum
-            console.log("Erzeuge türkisen Rauch-Nebel nach dem Fall...");
-            this.createRoomFog(currentPos, 2.2, 18000); // Geringere Intensität für mehr Durchsichtigkeit, Dauer 18 Sekunden
-            // <<<<<<<< ENDE Rauch-Nebel nach dem Fallen <<<<<<<<
-          }
-          
-          // Rotation zurücksetzen für normale Ansicht
-          camera.rotation.x = originalRotation.x;
-          camera.rotation.y = originalRotation.y;
-          camera.rotation.z = originalRotation.z;
-          
-          // Spielerkontrolle wiederherstellen
-          if (window.controls) window.controls.velocity = originalVelocity;
-          
-          // Informationsmeldung in der Konsole
-          console.log("Spieler ist auf dem Boden des Hospitals gelandet!");
-          
-        }, 3000); // Längere Pause nach dem Aufprall für dramatischen Effekt
+    // Nach kurzer Pause Nebel aktivieren und Bewegung für die Nebeldauer blockieren
+    setTimeout(() => {
+      // Statt zur Startposition zurückzukehren, bleiben wir am aktuellen Ort auf dem Boden
+      // Wir behalten die X/Z Position, aber setzen Y auf höhere Bodenhöhe
+      if (this.scene.camera) {
+        const currentPos = this.scene.camera.position;
+        this.scene.camera.position.set(currentPos.x, 10, currentPos.z);
+        this.scene.camera.lookAt(currentPos.x, 10, currentPos.z - 10);
+        // Rotation zurücksetzen für normale Ansicht
+        camera.rotation.x = originalRotation.x;
+        camera.rotation.y = originalRotation.y;
+        camera.rotation.z = originalRotation.z;
+        // >>>>>>>> HIER wird der Rauch-Nebel nach dem Fall erzeugt und Bewegung blockiert <<<<<<<<
+        // Nebeldauer und Blockdauer synchronisieren (z.B. 5 Sekunden)
+        const fogDuration = 5000;
+        this.createRoomFog(currentPos, 2.2, fogDuration); // Nebel und Blockzeit identisch
+        // Während createRoomFog aktiv ist, wird Bewegung blockiert und nach Ende wiederhergestellt
+        // <<<<<<<< ENDE Rauch-Nebel nach dem Fallen <<<<<<<<
+      }
+      // Informationsmeldung in der Konsole
+      console.log("Spieler ist auf dem Boden des Hospitals gelandet!");
+    }, 300); // Kürzere Pause nach dem Aufprall, dann sofort Nebel
       }
     };
     
@@ -805,7 +796,7 @@ export class Room2 extends BaseRoom {
     if (!scene || !scene.camera) return;
     // Sound für den Nebel (optional)
     const fogSound = new Audio('/assets/audio/things_unremembered.mp3');
-    fogSound.volume = 0.3;
+    fogSound.volume = 0.4;
     fogSound.play().catch(e => {});
 
     // Mehrere überlappende Planes für dichteren, überschneidenden Nebel
@@ -845,17 +836,82 @@ export class Room2 extends BaseRoom {
     };
     updatePlanes();
 
-    // Spielerbewegung für 5 Sekunden blockieren
+    // Spielerbewegung und Kamera ab Start des Nebels blockieren und nach Ende wieder freigeben
     let originalVelocity = null;
-    if (window.controls && typeof window.controls.velocity !== 'undefined') {
-      originalVelocity = window.controls.velocity;
-      window.controls.velocity = 0;
-    }
+    let velocityLocked = false;
+    let pointerLockWasActive = false;
+    let pointerLockElement = null;
+    let pointerLockChangeHandler = null;
+    let keydownHandler = null;
+    let keyupHandler = null;
+    let blockedKeys = new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ']);
+    // Blockiert alle WASD/Arrow/Space Eingaben
+    keydownHandler = function(e) {
+      if (blockedKeys.has(e.key.toLowerCase())) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+    keyupHandler = function(e) {
+      if (blockedKeys.has(e.key.toLowerCase())) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+    // PointerLock blockieren
+    pointerLockElement = document.body;
+    pointerLockChangeHandler = function() {
+      if (document.pointerLockElement === pointerLockElement) {
+        // Sofort wieder verlassen, falls während Nebel aktiviert
+        document.exitPointerLock();
+      }
+    };
+    const lockMovement = () => {
+      if (window.controls && typeof window.controls.velocity !== 'undefined' && !velocityLocked) {
+        originalVelocity = window.controls.velocity;
+        window.controls.velocity = 0;
+        velocityLocked = true;
+      }
+      // Blockiere Tastatureingaben
+      window.addEventListener('keydown', keydownHandler, true);
+      window.addEventListener('keyup', keyupHandler, true);
+      // Blockiere PointerLock
+      document.addEventListener('pointerlockchange', pointerLockChangeHandler, true);
+      // Falls bereits PointerLock aktiv ist, verlassen
+      if (document.pointerLockElement === pointerLockElement) {
+        pointerLockWasActive = true;
+        document.exitPointerLock();
+      } else {
+        pointerLockWasActive = false;
+      }
+    };
+    const unlockMovement = () => {
+      // Bewegung wieder freigeben, unabhängig von vorherigem Wert
+      if (window.controls && typeof window.controls.velocity !== 'undefined') {
+        window.controls.velocity = 50; // Standardgeschwindigkeit für Raum 2
+        velocityLocked = false;
+      }
+      // Tastatureingaben wieder zulassen
+      window.removeEventListener('keydown', keydownHandler, true);
+      window.removeEventListener('keyup', keyupHandler, true);
+      // PointerLock wieder erlauben
+      document.removeEventListener('pointerlockchange', pointerLockChangeHandler, true);
+      // Falls vor Nebel aktiv, PointerLock wieder aktivieren
+      if (pointerLockWasActive && pointerLockElement && pointerLockElement.requestPointerLock) {
+        setTimeout(() => {
+          pointerLockElement.requestPointerLock();
+        }, 100); // Leichte Verzögerung, damit Nebel erst entfernt wird
+      }
+    };
+    // Sofort blockieren
+    lockMovement();
 
     // Farb-Animation: Nebel mischt sich von Blau/Türkis zu Rot
     let running = true;
     const fogStart = Date.now();
-    const fogDuration = 5000; // 5 Sekunden
+    const fogDuration = duration; // Nebeldauer wie übergeben
     function animateOverlay() {
       if (!running) return;
       updatePlanes();
@@ -871,16 +927,14 @@ export class Room2 extends BaseRoom {
     }
     animateOverlay();
 
-    // Nach 5 Sekunden Nebel entfernen und Bewegung wiederherstellen
+    // Nach Ablauf des Nebels alles entfernen und Bewegung wiederherstellen
     setTimeout(() => {
       running = false;
       fogPlanes.forEach(fogPlane => scene.remove(fogPlane));
       fogSound.pause();
       fogSound.currentTime = 0;
-      if (window.controls && originalVelocity !== null) {
-        window.controls.velocity = originalVelocity;
-      }
-    }, 5000);
+      unlockMovement(); // Bewegung und PointerLock wieder freigeben
+    }, duration);
   }
 
   // Fügt eine kontinuierliche Schwebebewegung zum Squid hinzu
