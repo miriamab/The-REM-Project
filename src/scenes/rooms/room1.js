@@ -525,8 +525,8 @@ if (!this.camera || !this.camera.position) {
 
   // Zentraler Callback für den Raumwechsel nach Cutscene
   switchToRoom2() {
-    const newRoom = switchRoom(Room2, this.scene);
-    if (typeof setColliders === 'function' && newRoom && newRoom.colliders) setColliders(newRoom.colliders);
+    // switchRoom übernimmt jetzt ALLE notwendigen Initialisierungen
+    return switchRoom(Room2, this.scene);
   }
 
   // Wird aufgerufen, wenn Raum 1 abgeschlossen ist

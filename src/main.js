@@ -17,12 +17,21 @@ import { Room2 } from './scenes/rooms/room2.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x333333);
 
-const START_ROOM = 2; // 1 = Room1, 2 = Room2
+const START_ROOM = 1; // 1 = Room1, 2 = Room2
 
 // Skip Video (true) oder Video abspielen (false)
-const SKIP_CUTSCENE = true; 
+const SKIP_CUTSCENE = false; 
 
 let currentRoom = null;
+
+// Globale currentRoom-Variable für andere Module verfügbar machen
+window.currentRoom = currentRoom;
+
+// Globale Funktion, um currentRoom zu aktualisieren
+window.updateCurrentRoom = function(newRoom) {
+  currentRoom = newRoom;
+  window.currentRoom = newRoom;
+};
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.6, 5);
@@ -115,47 +124,23 @@ let StartRoomClass = START_ROOM === 2 ? Room2 : Room1;
 
 // Nur initialen Raum laden, wenn noch keiner existiert (z.B. nach Cutscene aus Room1 nicht nochmal überschreiben)
 if (!window.__roomAlreadyLoaded) {
-  if (SKIP_CUTSCENE) {
-    currentRoom = switchRoom(StartRoomClass, scene);
-    setColliders(currentRoom.colliders);
-    crosshair.style.display = '';
-
-    // Kamera dynamisch an den aktuellen Raum übergeben
-    if (currentRoom) {
-      currentRoom.camera = camera;
-    }
-
-    // Falls wir direkt in Room2 starten, Sounds erst nach User-Klick versuchen zu starten
-    if (currentRoom instanceof Room2) {
-      const tryStartSounds = () => {
-        currentRoom.startRoom2Sounds && currentRoom.startRoom2Sounds();
-        document.removeEventListener('click', tryStartSounds);
-      };
-      document.addEventListener('click', tryStartSounds);
-    }
-
-  } else {
-    playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
-      crosshair.style.display = '';
+  try {
+    if (SKIP_CUTSCENE) {
       currentRoom = switchRoom(StartRoomClass, scene);
-      setColliders(currentRoom.colliders);
+      // switchRoom übernimmt jetzt alle Initialisierungen
+      crosshair.style.display = '';
 
-      // Kamera dynamisch an den aktuellen Raum übergeben
-      if (currentRoom) {
-        currentRoom.camera = camera;
-      }
-
-      // Nach Cutscene und Raumwechsel: Room2-Sounds erst nach User-Klick versuchen zu starten
-      if (currentRoom instanceof Room2) {
-        const tryStartSounds = () => {
-          currentRoom.startRoom2Sounds && currentRoom.startRoom2Sounds();
-          document.removeEventListener('click', tryStartSounds);
-        };
-        document.addEventListener('click', tryStartSounds);
-      }
-    });
+    } else {
+      playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
+        crosshair.style.display = '';
+        currentRoom = switchRoom(StartRoomClass, scene);
+        // switchRoom übernimmt jetzt alle Initialisierungen
+      });
+    }
+    window.__roomAlreadyLoaded = true;
+  } catch (error) {
+    console.error('Fehler beim Laden des initialen Raums:', error);
   }
-  window.__roomAlreadyLoaded = true;
 }
 
 window.setupIngameMenu = setupIngameMenu;
