@@ -142,8 +142,8 @@ body {
 </head>
 <body>
   <div class="quiz-container">
-    <div class="quiz-title">SOMNA – Programm zur Gedächtnis-Neukalibrierung</div>
-    <div class="quiz-sub">Bitte beantworten Sie den elektronischen Fragebogen, um zur nächsten Phase zugelassen zu werden.</div>
+    <div class="quiz-title">SOMNA – Memory recalibration program</div>
+    <div class="quiz-sub">Please answer the electronic questionnaire to be admitted to the next phase.</div>
     <div class="quiz-progress" id="quiz-progress"></div>
     <div class="quiz-question" id="quiz-question"></div>
     <div class="quiz-options" id="quiz-options"></div>
@@ -266,7 +266,7 @@ body {
               const audio = new Audio('/assets/audio/electric-chimes.wav');
               audio.volume = 0.2;
               audio.play();
-              rightSoundPlayed = true;
+              rightSoundPlayed = true; 
             }
           } else if (i === selected) {
             btn.classList.add('incorrect');
@@ -275,7 +275,7 @@ body {
         });
         if (wasSecondWrong) {
           const audio = new Audio('/assets/audio/wrong_answer.mp3');
-          audio.volume = 0.5;
+          audio.volume = 0.4;
           audio.play();
         }
         q('quiz-next').disabled = true;
@@ -308,7 +308,7 @@ body {
             if (!wrongSoundPlayed && selected !== qdata.correct) {
               const wrongSound = qdata.wrongSound || '/assets/audio/wrong_answer.mp3';
               const audio = new Audio(wrongSound);
-              audio.volume = 0.6; // Lautstärke für falsche Antwort
+              audio.volume = 0.5; // Lautstärke für falsche Antwort
               audio.play();
               wrongSoundPlayed = true;
               wasWrong = true;
@@ -427,3 +427,5 @@ console.log('window.startQuizBgSound ist bereit.');
   </script>
 </body>
 </html>
+
+
