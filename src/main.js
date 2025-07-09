@@ -27,6 +27,9 @@ let currentRoom = null;
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.6, 5);
 scene.add(camera);
+if (currentRoom) {
+  currentRoom.camera = camera; // Kamera dynamisch an den aktuellen Raum übergeben
+}
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -111,7 +114,7 @@ let StartRoomClass = START_ROOM === 2 ? Room2 : Room1;
 
 
 // Nur initialen Raum laden, wenn noch keiner existiert (z.B. nach Cutscene aus Room1 nicht nochmal überschreiben)
-if (!window.roomAlreadyLoaded) {
+if (!window.__roomAlreadyLoaded) {
   if (SKIP_CUTSCENE) {
     currentRoom = switchRoom(StartRoomClass, scene);
     setColliders(currentRoom.colliders);
@@ -152,7 +155,7 @@ if (!window.roomAlreadyLoaded) {
       }
     });
   }
-  window.roomAlreadyLoaded = true;
+  window.__roomAlreadyLoaded = true;
 }
 
 window.setupIngameMenu = setupIngameMenu;
