@@ -44,8 +44,7 @@ export function startBloodFountain(scene, position) {
 
 
 // FUNKTION FÜR BLUT AM BODEN:
-export function startBloodPool(scene, teddyPosition) {
-  // Erstelle eine rote, halbtransparente Scheibe
+export function startBloodPool(scene, teddyPosition, rose, key) {
   const geometry = new THREE.CircleGeometry(0.2, 40); // Start-Radius klein
   const material = new THREE.MeshBasicMaterial({ color: 0x5c0707, transparent: true, opacity: 0.7 });
   material.depthWrite = false; // Blut soll keine Tiefe schreiben
@@ -58,19 +57,23 @@ export function startBloodPool(scene, teddyPosition) {
 
   scene.add(bloodPool);
 
-  // Animation: Fläche langsam vergrößern
   let maxScale = 100; // Endgröße (Radius)
-  let growSpeed = 0.013; // Wie schnell wächst die Fläche
+  let growSpeed = 0.04;
 
   function animatePool() {
+
     if (bloodPool.scale.x < maxScale) {
       bloodPool.scale.x += growSpeed;
       bloodPool.scale.y += growSpeed;
-      // Optional: opacity langsam erhöhen für "frischeres" Blut
-      if (bloodPool.material.opacity < 0.85) {
-        bloodPool.material.opacity += 0.001;
+
+      // Rose und Schlüssel erscheinen lassen, wenn Blut den Mittelpunkt erreicht
+      if (bloodPool.scale.x > 50 && rose.position.y < 2) {
+        rose.position.y += 0.05; // Langsam nach oben bewegen
+        key.position.y += 0.075; // Langsam nach oben bewegen
       }
+
       requestAnimationFrame(animatePool);
+    } else {
     }
   }
   animatePool();

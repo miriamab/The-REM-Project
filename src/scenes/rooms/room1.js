@@ -265,32 +265,72 @@ this.colliders.push(colliderRightWall);
       this.radioLock = makeRadioInteractive(radio, 'assets/audio/radio-music.mp3', this);
     });
 
-    // Schwarzer Kreis an der Wand
-const blackCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Schwarz
-const blackCircleGeometry = new THREE.CircleGeometry(2.1, 45); // Radius 2, 32 Segmente für glatte Kanten
-const blackCircle = new THREE.Mesh(blackCircleGeometry, blackCircleMaterial);
+    // Schwarzes Rechteck an der Wand (Schatten einer Tür)
+    const blackRectangleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Schwarz
+    const blackRectangleGeometry = new THREE.PlaneGeometry(3, 8, 1); // Breite und Höhe des Rechtecks
+    const blackRectangle = new THREE.Mesh(blackRectangleGeometry, blackRectangleMaterial);
+    blackRectangle.visible = false; // Unsichtbar machen
+    blackRectangle.position.set(-4.5, 2.8, 9.5); // An der Vorderwand (gegenüber der Kommode)
+    blackRectangle.rotation.y = Math.PI; // An die Wand ausrichten
+    blackRectangle.name = 'blackRectangle'; // WICHTIG: Name setzen für getObjectByName
+    this.scene.add(blackRectangle);
+    // NICHT zu colliders hinzufügen!
 
-// Position und Rotation anpassen
-blackCircle.position.set(-4.5, 2.8, 9.5); // An der Vorderwand (gegenüber der Kommode)
-blackCircle.rotation.y = Math.PI; // An die Wand ausrichten
-this.add(blackCircle);
+    // Entferne ggf. alten Collider, falls noch vorhanden (beim Hot-Reload oder mehrfacher Initialisierung)
+    const oldCollider = this.scene.getObjectByName('blackRectangleCollider');
+    if (oldCollider) {
+      this.scene.remove(oldCollider);
+    }
 
-// Ring um den schwarzen Kreis (Portal.gltf)
-const gltfloader = new GLTFLoader();
-gltfloader.load('src/objects/models/room_1/Portal.gltf', (gltf) => {
-  const ring = gltf.scene;
+// Rose
+loader.load('src/objects/models/room_1/rose.glb', (gltf) => {
+  const rose = gltf.scene;
 
-  // Skalierung anpassen (ggf. anpassen, damit der Ring den Kreis umgibt)
-  ring.scale.set(28, 28, 28);
+  rose.scale.set(1, 1, 1);
 
-  // Position anpassen (gleiche Position wie der schwarze Kreis)
-  ring.position.set(-4.5, 2.8, 9.5);
+  rose.position.set(0, -2, 0); // X = 0, Y = leicht über dem Boden, Z = 0
 
-  // Rotation anpassen (falls nötig, um den Ring korrekt auszurichten)
-  ring.rotation.y = Math.PI ; // An die Wand ausrichten
+  // Rotation (falls nötig)
+  rose.rotation.y = 0; // Keine Rotation, zeigt nach vorne
 
-  // Ring zur Szene hinzufügen
-  this.add(ring);
+  // Blume zur Szene hinzufügen
+  this.add(rose);
+  this.rose = rose;
+});
+
+// Schlüssel über der Rose
+loader.load('src/objects/models/room_1/key.glb', (gltf) => {
+  const key = gltf.scene;
+
+  // Skalierung anpassen (ggf. anpassen, damit der Schlüssel die richtige Größe hat)
+  key.scale.set(1, 1, 1);
+
+  // Position über der Rose
+  key.position.set(0, -2, 0); // X = 0, Y = 1.5 (über der Rose), Z = 0
+
+  // Rotation (falls nötig)
+  key.rotation.y = 0; // Keine Rotation, zeigt nach vorne
+
+  // Schlüssel zur Szene hinzufügen
+  this.add(key);
+  this.key = key;
+
+  // Animation für langsame Rotation
+  function animateKeyRotation() {
+    key.rotation.y += 0.01; // Langsame Drehung um die Y-Achse
+    requestAnimationFrame(animateKeyRotation); // Nächsten Frame anfordern
+  }
+  animateKeyRotation(); // Animation starten
+
+  // Schlüssel interaktiv machen
+key.traverse(child => {
+  if (child.isMesh) {
+    registerInteractive(child, () => {
+      // Schwarzes Rechteck sichtbar machen
+      blackRectangle.visible = true;
+    });
+  }
+});
 });
 
     // Lamp
@@ -350,7 +390,6 @@ gltfloader.load('src/objects/models/room_1/Portal.gltf', (gltf) => {
     });
 
 
-
     // Tassen
     loader.load('src/objects/models/room_1/soviet_mug.glb', (gltf) => {
       const mug = gltf.scene;
@@ -361,39 +400,10 @@ gltfloader.load('src/objects/models/room_1/Portal.gltf', (gltf) => {
       this.colliders.push(mug);
     });
 
-
-/** 
-    // Blubberblasen Rätsel
-  const blubber = createBlubberblasen(this.scene);
-  this.animateBlubberblasen = blubber.animate;
-  this.bubbles = blubber.bubbleArray;
-
-  this.bubbles.forEach(bubble => {
-  registerInteractive(bubble, (hit) => {
-    this.scene.remove(hit);
-    hit.userData.removed = true;
-
-    // Effekt anzeigen
-    spawnBubbleEffect(this.scene, hit.position);
-
-    // Wenn keine Blasen mehr da sind: Nebel und Licht!
-    if (this.bubbles.filter(b => !b.userData.removed).length === 0) {
-      triggerOrangeFogAndLight(this.scene, this.ambientLight, this.dirLight);
-
-      // Button und Teddy erst nach kurzer Verzögerung (nach Licht-Übergang) anzeigen:
-      setTimeout(() => {
-        this.spawnTeddyAndButton();
-      }, 2200);
-    }
-    });
-});
-*/
-
-
  // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
     setTimeout(() => {
       playNarratorClip('eins');
-    }, 25000); // 25 Sekunden
+    }, 5000); // 25 Sekunden
 
 
 const quallenTexture = textureLoader.load('assets/images/quallen.png');
@@ -505,7 +515,17 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
     somnaFloorMesh.rotation.z = Math.PI; // um 180° drehen
     this.add(somnaFloorMesh);
 
-   
+   // Hintergrundmusik im Raum abspielen
+const backgroundMusic = new Audio('assets/audio/spooky_sound.mp3');
+backgroundMusic.loop = true; // Musik wiederholen
+backgroundMusic.volume = 0.5; // Lautstärke anpassen
+backgroundMusic.play(); // Musik starten
+
+
+if (!this.camera || !this.camera.position) {
+  console.error('Kamera ist nicht korrekt initialisiert!');
+  return;
+}
 
   } // Ende init
 
@@ -517,9 +537,10 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
 
   // Wird aufgerufen, wenn Raum 1 abgeschlossen ist
   onSolved() {
-    playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
-      this.switchToRoom2();
-    });
+    const blackRectangle = this.scene.getObjectByName('blackRectangle');
+    if (blackRectangle) {
+      blackRectangle.visible = true; // Tür sichtbar machen
+    }
   }
 
   spawnTeddyAndButton() {
@@ -541,9 +562,8 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
             if (!this.bloodStarted) return;
             const bloodPool = this.scene.getObjectByName('bloodPool');
             if (!bloodPool) return;
-            playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
-              this.switchToRoom2();
-            });
+            
+            playNarratorClip('sechs');
           });
         }
       });
@@ -564,7 +584,7 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
               this.bloodStarted = true;
               playNarratorClip('fuenf'); // Audio fuenf abspielen, wenn Teddy zu bluten beginnt
               startBloodFountain(this.scene, this.teddyPosition);
-              startBloodPool(this.scene, this.teddyPosition);
+              startBloodPool(this.scene, this.teddyPosition, this.rose, this.key);
               // Bear-Sound nach 5 Sekunden abspielen
               setTimeout(() => {
                 const bearSound = new Audio('assets/audio/bear-sound.wav');

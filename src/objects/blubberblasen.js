@@ -29,8 +29,8 @@ export function createBlubberblasen(scene) {
     envMap: envMap
   });
 
-  // Erstelle viele Blasen
-  for (let i = 0; i < 8; i++) {
+  // Erstelle viele Blasen (am besten 8)
+  for (let i = 0; i < 3; i++) {
     const mesh = new THREE.Mesh(geometry, material.clone());
     // x: -9 bis 9, y: 0.5 bis 9.5, z: -9 bis 9 (etwas Abstand zu den Wänden/Boden/Decke)
     mesh.position.x = Math.random() * 18 - 9;
