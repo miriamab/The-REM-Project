@@ -48,10 +48,13 @@ export function startBloodPool(scene, teddyPosition) {
   // Erstelle eine rote, halbtransparente Scheibe
   const geometry = new THREE.CircleGeometry(0.2, 40); // Start-Radius klein
   const material = new THREE.MeshBasicMaterial({ color: 0x5c0707, transparent: true, opacity: 0.7 });
+  material.depthWrite = false; // Blut soll keine Tiefe schreiben
+  material.depthTest = true;   // Blut wird von echten Objekten überdeckt
   const bloodPool = new THREE.Mesh(geometry, material);
   bloodPool.name = "bloodPool"; // <--- Name setzen, damit es gefunden wird
   bloodPool.rotation.x = -Math.PI / 2; // Flach auf den Boden legen
-  bloodPool.position.set(teddyPosition.x, 0.011, teddyPosition.z); // Direkt auf dem Boden
+  bloodPool.position.set(teddyPosition.x, 0.016, teddyPosition.z); // Direkt auf dem Boden
+  bloodPool.renderOrder = 1.5; // Leicht erhöht, aber nicht über allem
 
   scene.add(bloodPool);
 
