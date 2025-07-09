@@ -66,13 +66,49 @@ export class Room2 extends BaseRoom {
             registerInteractive(obj, () => {
               if (this.clipboardFound) return;
               this.clipboardFound = true;
-              // Sound abspielen
+              
+              // Explosionseffekt: Erzeuge Partikel und entferne das Modell
+              const explosionParticles = [];
+              const particleCount = 32;
+              for (let i = 0; i < particleCount; i++) {
+                const geometry = new THREE.SphereGeometry(0.2 + Math.random() * 0.15, 6, 6);
+                const material = new THREE.MeshBasicMaterial({ color: 0x99eaff, transparent: true, opacity: 0.8 });
+                const particle = new THREE.Mesh(geometry, material);
+                particle.position.copy(obj.getWorldPosition(new THREE.Vector3()));
+                this.scene.add(particle);
+                // Zufällige Flugrichtung
+                const dir = new THREE.Vector3(
+                  (Math.random() - 0.5) * 2,
+                  Math.random() * 2,
+                  (Math.random() - 0.5) * 2
+                ).normalize().multiplyScalar(0.7 + Math.random() * 1.2);
+                let t = 0;
+                const animate = () => {
+                  t += 0.04;
+                  particle.position.addScaledVector(dir, 0.18 * (1 - t/1.5));
+                  particle.material.opacity = Math.max(0, 0.8 * (1 - t/1.5));
+                  if (t < 1.5) {
+                    requestAnimationFrame(animate);
+                  } else {
+                    this.scene.remove(particle);
+                  }
+                };
+                animate();
+                explosionParticles.push(particle);
+              }
+              
+              // Soundeffekt: Bubble-Sound und das ursprüngliche signed_documents.mp3
+              const explodeSound = new Audio('/assets/audio/blubberblasen.mp3');
+              explodeSound.volume = 0.5;
+              explodeSound.play().catch(() => {});
+              
+              // Original Sound abspielen
               const audio = new Audio('/assets/audio/signed_documents.mp3');
               audio.play();
+              
               // Objekt aus Szene entfernen
               this.scene.remove(clipboard);
-              // Terminal erst jetzt aktivierbar machen
-              this.terminalEnabled = true;
+              // Clipboard aktiviert kein Terminal mehr - das macht jetzt die Spritze
             });
           }
         });
@@ -81,7 +117,7 @@ export class Room2 extends BaseRoom {
         // Speichere non-squid Objekte separat
         const gltfObjects = [
           { file: '/hospital_objects/bottles_medical.glb', pos: [120, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
-          { file: '/hospital_objects/jellyfish.glb', pos: [120, 0, -150], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
+          { file: '/hospital_objects/jellyfish.glb', pos: [120, 9, -120], scale: [0.02,0.02,0.02], rot: [0, 0, 0] },
           { file: '/hospital_objects/hospital_asset.glb', pos: [160, 9.3, -192], scale: [0.01,0.01,0.01], rot: [0, -Math.PI/2, 0] },
           { file: '/hospital_objects/wheelchair.glb', pos: [168, -6.5, -130], scale: [0.60,0.60,0.60], rot: [0, Math.PI, 0] }
         ];
@@ -95,8 +131,9 @@ export class Room2 extends BaseRoom {
             model.scale.set(...obj.scale);
             model.rotation.set(...obj.rot);
             model.traverse(child => { if (child.isMesh) child.visible = true; });
-            // Interaktion für bottles_medical.glb: Explosion und Entfernen
-            if (obj.file === '/hospital_objects/bottles_medical.glb' || obj.file === '/hospital_objects/medical-shot.glb') {
+            // Interaktion für bottles_medical.glb und jellyfish.glb: Explosion und Entfernen
+            if (obj.file === '/hospital_objects/bottles_medical.glb' || 
+                obj.file === '/hospital_objects/jellyfish.glb') {
               model.traverse(child => {
                 if (child.isMesh) {
                   registerInteractive(child, () => {
@@ -182,10 +219,23 @@ export class Room2 extends BaseRoom {
           this.squidModel.traverse(child => {
             if (child.isMesh) {
               registerInteractive(child, () => {
+                console.log('DEBUG: Monster wurde geklickt! Spiele sofort Hinweis-Sound ab.');
+                
+                // Sofort beim ersten Klick den Hinweis-Sound abspielen
+                const hintSound = new Audio('/assets/audio/Hinweise/hint_4 objects.mp3');
+                hintSound.volume = 0.7;
+                hintSound.play().then(() => {
+                  console.log('SUCCESS: Hinweis-Sound erfolgreich beim Klick abgespielt!');
+                }).catch((error) => {
+                  console.error('ERROR: Hinweis-Sound konnte nicht abgespielt werden:', error);
+                });
+                
                 if (this.squidHitCount >= this.maxSquidHits) return;
                 // 3x cell.glb werfen (Animation)
                 const throwCell = (count) => {
+                  console.log('DEBUG: throwCell aufgerufen mit count =', count);
                   if (count === 0) {
+                    console.log('DEBUG: Monster wird besiegt! Alle 3 Treffer erreicht.');
                     // Monster komplett entfernen (auch Blocker, Collider, Licht, Animationen)
                     if (this.squidChasingAnimationId) {
                       cancelAnimationFrame(this.squidChasingAnimationId);
@@ -210,6 +260,23 @@ export class Room2 extends BaseRoom {
                       this.squidChaseSound = null;
                     }
                     this.isSquidChasing = false;
+                    
+                    console.log('DEBUG: Starte 2-Sekunden-Timer für Hinweis-Sound...');
+                    // 2 Sekunden nach Monster-Besiegung: Hinweis-Sound abspielen
+                    setTimeout(() => {
+                      console.log('DEBUG: 2 Sekunden vergangen - Versuche Hinweis-Sound abzuspielen...');
+                      const hintSound = new Audio('/assets/audio/Hinweise/hint_4 objects.mp3');
+                      hintSound.volume = 0.7;
+                      hintSound.preload = 'auto';
+                      
+                      // Sofort versuchen abzuspielen ohne komplizierte Promise-Logik
+                      hintSound.play().then(() => {
+                        console.log('SUCCESS: Hinweis-Sound erfolgreich abgespielt!');
+                      }).catch((error) => {
+                        console.error('ERROR: Hinweis-Sound konnte nicht abgespielt werden:', error);
+                      });
+                    }, 2000);
+                    
                     return;
                   }
                   const cell = this.cellModel.clone();
@@ -257,6 +324,7 @@ export class Room2 extends BaseRoom {
                             this.squidChaseSound = null;
                           }
                           this.isSquidChasing = false;
+                          
                           return;
                         }
                         setTimeout(() => throwCell(count - 1), 300);
@@ -526,10 +594,15 @@ export class Room2 extends BaseRoom {
       syringe.rotation.y = Math.PI / 2;
       syringe.name = 'quiz_syringe';
 
-      // Interaktion: Explosionseffekt und Entfernen bei Klick
+      // Interaktion: Terminal aktivieren und Explosionseffekt beim Klick
       syringe.traverse(child => {
         if (child.isMesh) {
           registerInteractive(child, () => {
+            console.log('Spritze wurde geklickt! Terminal wird aktiviert.');
+            
+            // Terminal aktivieren (wichtigster Teil!)
+            this.terminalEnabled = true;
+            
             // Explosionseffekt: Erzeuge Partikel und entferne das Modell
             const explosionParticles = [];
             const particleCount = 32;
@@ -593,13 +666,13 @@ export class Room2 extends BaseRoom {
     audioLoader.load('sounds/scary-hospital.mp3', (buffer) => {
       this.spookySound.setBuffer(buffer);
       this.spookySound.setLoop(true);
-      this.spookySound.setVolume(0.1);
+      this.spookySound.setVolume(0.05);
     });
 
     audioLoader.load('sounds/hospital-food-cart-wheeled-79068.mp3', (buffer) => {
       this.atmoSound.setBuffer(buffer);
       this.atmoSound.setLoop(true);
-      this.atmoSound.setVolume(0.1);
+      this.atmoSound.setVolume(0.05);
     });
 
     // Sounds nach User-Interaktion (z.B. Klick) oder explizit nach Raumwechsel starten
@@ -676,6 +749,14 @@ export class Room2 extends BaseRoom {
   shakeCamera(intensity = 0.5, duration = 500) {
     const camera = this.scene.camera;
     if (!camera) return;
+    
+    // Beben-Sound abspielen
+    const earthquakeSound = new Audio('/assets/audio/earth-rumble.wav');
+    earthquakeSound.volume = 0.3;
+    earthquakeSound.play().catch(() => {
+      console.warn('Beben-Sound konnte nicht abgespielt werden');
+    });
+    
     const originalPosition = camera.position.clone();
     let elapsed = 0;
     const shake = () => {
@@ -723,7 +804,7 @@ export class Room2 extends BaseRoom {
       this.fallSound.currentTime = 0;
     }
     this.fallSound = new Audio('/assets/audio/falling.wav');
-    this.fallSound.volume = 0.4;
+    this.fallSound.volume = 0.1;
     this.fallSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
     
     // Fallanimation mit exponentieller Beschleunigung
@@ -1358,6 +1439,15 @@ export class Room2 extends BaseRoom {
         setTimeout(() => {
           // Sicherstellen, dass Clipboard und Terminal noch funktionieren können
           this.shakeCamera(1.5, 1800); // Etwas stärkeres Beben für besseren Effekt
+          
+          // Nach dem Beben: "Wrong direction" Sound abspielen
+          setTimeout(() => {
+            const wrongDirectionSound = new Audio('/assets/audio/wrong_direction.mp3');
+            wrongDirectionSound.volume = 0.7;
+            wrongDirectionSound.play().catch(() => {
+              console.warn('Wrong direction Sound konnte nicht abgespielt werden');
+            });
+          }, 1900); // Kurz nach Ende des Bebens (1800ms + 100ms Pause)
         }, 200);
       }
     }
