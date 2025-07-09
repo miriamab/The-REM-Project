@@ -274,13 +274,7 @@ this.colliders.push(colliderRightWall);
     blackRectangle.rotation.y = Math.PI; // An die Wand ausrichten
     blackRectangle.name = 'blackRectangle'; // WICHTIG: Name setzen für getObjectByName
     this.scene.add(blackRectangle);
-    // NICHT zu colliders hinzufügen!
-
-    // Entferne ggf. alten Collider, falls noch vorhanden (beim Hot-Reload oder mehrfacher Initialisierung)
-    const oldCollider = this.scene.getObjectByName('blackRectangleCollider');
-    if (oldCollider) {
-      this.scene.remove(oldCollider);
-    }
+    
 
 // Rose
 loader.load('src/objects/models/room_1/rose.glb', (gltf) => {
@@ -327,7 +321,7 @@ key.traverse(child => {
   if (child.isMesh) {
     registerInteractive(child, () => {
       // Schwarzes Rechteck sichtbar machen
-      blackRectangle.visible = true;
+     this.onSolved();
     });
   }
 });
@@ -537,11 +531,25 @@ if (!this.camera || !this.camera.position) {
 
   // Wird aufgerufen, wenn Raum 1 abgeschlossen ist
   onSolved() {
-    const blackRectangle = this.scene.getObjectByName('blackRectangle');
-    if (blackRectangle) {
-      blackRectangle.visible = true; // Tür sichtbar machen
-    }
+  const blackRectangle = this.scene.getObjectByName('blackRectangle');
+  if (blackRectangle) {
+    blackRectangle.visible = true; // Tür sichtbar machen
+
+    // Interaktivität für die Tür registrieren
+    blackRectangle.traverse(child => {
+      if (child.isMesh) {
+        registerInteractive(child, () => {
+          playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
+            this.switchToRoom2(); // Raumwechsel ausführen
+          });
+        });
+      }
+    });
+  } else {
+    console.error('Schwarzes Rechteck nicht gefunden!');
   }
+}
+
 
   spawnTeddyAndButton() {
     const loader = new GLTFLoader();
