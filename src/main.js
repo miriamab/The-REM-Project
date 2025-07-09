@@ -111,11 +111,17 @@ let StartRoomClass = START_ROOM === 2 ? Room2 : Room1;
 
 
 // Nur initialen Raum laden, wenn noch keiner existiert (z.B. nach Cutscene aus Room1 nicht nochmal überschreiben)
-if (!window.__roomAlreadyLoaded) {
+if (!window.roomAlreadyLoaded) {
   if (SKIP_CUTSCENE) {
     currentRoom = switchRoom(StartRoomClass, scene);
     setColliders(currentRoom.colliders);
     crosshair.style.display = '';
+
+    // Kamera dynamisch an den aktuellen Raum übergeben
+    if (currentRoom) {
+      currentRoom.camera = camera;
+    }
+
     // Falls wir direkt in Room2 starten, Sounds erst nach User-Klick versuchen zu starten
     if (currentRoom instanceof Room2) {
       const tryStartSounds = () => {
@@ -124,11 +130,18 @@ if (!window.__roomAlreadyLoaded) {
       };
       document.addEventListener('click', tryStartSounds);
     }
+
   } else {
     playCutsceneAndSwitch('/cutscenes/intro.mp4', () => {
       crosshair.style.display = '';
       currentRoom = switchRoom(StartRoomClass, scene);
       setColliders(currentRoom.colliders);
+
+      // Kamera dynamisch an den aktuellen Raum übergeben
+      if (currentRoom) {
+        currentRoom.camera = camera;
+      }
+
       // Nach Cutscene und Raumwechsel: Room2-Sounds erst nach User-Klick versuchen zu starten
       if (currentRoom instanceof Room2) {
         const tryStartSounds = () => {
@@ -139,7 +152,7 @@ if (!window.__roomAlreadyLoaded) {
       }
     });
   }
-  window.__roomAlreadyLoaded = true;
+  window.roomAlreadyLoaded = true;
 }
 
 window.setupIngameMenu = setupIngameMenu;
