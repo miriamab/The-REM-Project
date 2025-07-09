@@ -808,46 +808,79 @@ export class Room2 extends BaseRoom {
     fogSound.volume = 0.3;
     fogSound.play().catch(e => {});
 
-    // Großes Plane direkt vor der Kamera als Overlay
-    const geometry = new THREE.PlaneGeometry(100, 60);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x00fff7, // Neon-Türkis
-      transparent: true,
-      opacity: 0.55,
-      depthWrite: false
-    });
-    const fogPlane = new THREE.Mesh(geometry, material);
-    fogPlane.name = 'neonFogOverlay';
+    // Mehrere überlappende Planes für dichteren, überschneidenden Nebel
+    const fogPlanes = [];
+    const numPlanes = 4; // Anzahl der überlappenden Planes
+    // Farben für animierten Übergang von Blau zu Rot
+    const colorStart = new THREE.Color(0x00fff7); // Türkis/Blau
+    const colorEnd = new THREE.Color(0xff0033); // Rot
+    for (let i = 0; i < numPlanes; i++) {
+      const geometry = new THREE.PlaneGeometry(100 + i * 10, 60 + i * 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: colorStart.clone(),
+        transparent: true,
+        opacity: 0.22 + 0.13 * Math.random(), // leicht variierende Opazität
+        depthWrite: false
+      });
+      const fogPlane = new THREE.Mesh(geometry, material);
+      fogPlane.name = 'neonFogOverlay_' + i;
+      fogPlanes.push(fogPlane);
+      scene.add(fogPlane);
+    }
 
-    // Positioniere das Plane immer vor der Kamera
-    const updatePlane = () => {
+    // Planes vor der Kamera positionieren, leicht versetzt und rotiert
+    const updatePlanes = () => {
       if (!scene.camera) return;
-      // 10 Einheiten vor der Kamera
-      fogPlane.position.copy(scene.camera.position);
-      const dir = new THREE.Vector3();
-      scene.camera.getWorldDirection(dir);
-      fogPlane.position.add(dir.multiplyScalar(10));
-      fogPlane.quaternion.copy(scene.camera.quaternion);
+      for (let i = 0; i < fogPlanes.length; i++) {
+        const fogPlane = fogPlanes[i];
+        fogPlane.position.copy(scene.camera.position);
+        const dir = new THREE.Vector3();
+        scene.camera.getWorldDirection(dir);
+        fogPlane.position.add(dir.multiplyScalar(10 + i * 1.5));
+        fogPlane.quaternion.copy(scene.camera.quaternion);
+        // Leichte zufällige Rotation für Überschneidung
+        fogPlane.rotateZ((Math.PI / 12) * (i - 1.5) + Math.random() * 0.1);
+        fogPlane.rotateX(Math.random() * 0.08 - 0.04);
+      }
     };
-    updatePlane();
-    scene.add(fogPlane);
+    updatePlanes();
 
-    // Damit das Overlay immer vor der Kamera bleibt
+    // Spielerbewegung für 5 Sekunden blockieren
+    let originalVelocity = null;
+    if (window.controls && typeof window.controls.velocity !== 'undefined') {
+      originalVelocity = window.controls.velocity;
+      window.controls.velocity = 0;
+    }
+
+    // Farb-Animation: Nebel mischt sich von Blau/Türkis zu Rot
     let running = true;
+    const fogStart = Date.now();
+    const fogDuration = 5000; // 5 Sekunden
     function animateOverlay() {
       if (!running) return;
-      updatePlane();
+      updatePlanes();
+      // Farbverlauf berechnen
+      const elapsed = Date.now() - fogStart;
+      const t = Math.min(elapsed / fogDuration, 1);
+      for (let i = 0; i < fogPlanes.length; i++) {
+        const mat = fogPlanes[i].material;
+        mat.color.copy(colorStart.clone().lerp(colorEnd, t));
+        mat.needsUpdate = true;
+      }
       requestAnimationFrame(animateOverlay);
     }
     animateOverlay();
 
-    // Nach Ablauf entfernen
+    // Nach 5 Sekunden Nebel entfernen und Bewegung wiederherstellen
     setTimeout(() => {
       running = false;
-      scene.remove(fogPlane);
+      fogPlanes.forEach(fogPlane => scene.remove(fogPlane));
       fogSound.pause();
       fogSound.currentTime = 0;
-    }, duration);
+      if (window.controls && originalVelocity !== null) {
+        window.controls.velocity = originalVelocity;
+      }
+    }, 5000);
   }
 
   // Fügt eine kontinuierliche Schwebebewegung zum Squid hinzu
