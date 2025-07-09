@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>SOMNA – Questionnaire of memory</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preload" href="/fonts/PPSupplySans-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'PPSupplySans';
+      src: url('/fonts/PPSupplySans-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+body {
+      background: #18181b url('/assets/images/menu_overlay.png') center right/180% 180% no-repeat fixed;
+      color: #e0e0e0;
+      font-family: 'PPSupplySans', 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 200px 80px #000a, 0 0 0 0 #000;
+    }
+    .quiz-container {
+      background: rgba(20, 20, 28, 0.92);
+      border-radius: 18px;
+      box-shadow: 0 8px 48px 8px #000b, 0 2px 32px #000a;
+      padding: 48px 36px 36px 36px;
+      max-width: 440px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      border: 2px solid #23232b;
+      backdrop-filter: blur(2.5px) brightness(0.85);
+    }
+    .quiz-title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      color: #e0e0e0;
+      letter-spacing: 0.04em;
+      text-shadow: 0 2px 12px #000b, 0 0 2px #fff1;
+    }
+    .quiz-sub {
+      font-size: 1.1rem;
+      color: #bdbdbd;
+      margin-bottom: 32px;
+      text-align: center;
+      text-shadow: 0 1px 8px #000a;
+    }
+    .quiz-question {
+      font-size: 1.22rem;
+      font-weight: 500;
+      margin-bottom: 18px;
+      text-align: center;
+      color: #f3f3f3;
+      text-shadow: 0 2px 10px #000b, 0 0 2px #fff1;
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+    .quiz-option {
+      background: linear-gradient(90deg, #23232b 60%, #1a1a22 100%);
+      border: 2px solid #23232b;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 1.08rem;
+      color: #e0e0e0;
+      cursor: pointer;
+      transition: background 0.2s, border 0.2s, color 0.2s, box-shadow 0.2s;
+      text-align: left;
+      box-shadow: 0 2px 12px #000a;
+    }
+    .quiz-option.selected {
+      background: linear-gradient(90deg, #2d3a4a 60%, #23232b 100%);
+      border-color: #3b82f6;
+      color: #e0eaff;
+      box-shadow: 0 0 16px #3b82f655, 0 2px 12px #000a;
+    }
+    .quiz-option.correct {
+      background: linear-gradient(90deg, #1e3a2a 60%, #23232b 100%);
+      border-color: #10b981;
+      color: #d1fae5;
+      box-shadow: 0 0 16px #10b98155, 0 2px 12px #000a;
+    }
+    .quiz-option.incorrect {
+      background: linear-gradient(90deg, #3a1e1e 60%, #23232b 100%);
+      border-color: #ef4444;
+      color: #fee2e2;
+      box-shadow: 0 0 16px #ef444455, 0 2px 12px #000a;
+    }
+    .quiz-next {
+      margin-top: 12px;
+      padding: 12px 32px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(90deg, #23232b 60%, #1a1a22 100%);
+      color: #fff;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 12px #000a;
+    }
+    .quiz-next:disabled {
+      background: #23232b;
+      color: #888;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .quiz-progress {
+      position: absolute;
+      top: 18px;
+      right: 24px;
+      font-size: 0.98rem;
+      color: #666;
+      text-shadow: 0 1px 8px #000a;
+    }
+    .quiz-audio {
+      margin: 18px 0 8px 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    .quiz-hint {
+      font-size: 0.98rem;
+      color: #bdbdbd;
+      margin-bottom: 10px;
+      text-align: center;
+      text-shadow: 0 1px 8px #000a;
+    }
+    .quiz-end {
+      font-size: 1.2rem;
+      color: #10b981;
+      margin-top: 24px;
+      text-align: center;
+      text-shadow: 0 2px 10px #000b;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz-container">
+    <div class="quiz-title" style="text-align:center; display:flex; flex-direction:column; align-items:center;">
+      <span style="font-size:2.5rem; font-weight:700;">SOMNA</span>
+      <span style="font-size:1.7rem; font-weight:400; margin-top:4px; letter-spacing:0.01em;">Memory recalibration program</span>
+    </div>
+    <div class="quiz-sub">Please answer the electronic questionnaire to be admitted to the next phase.</div>
+    <div class="quiz-progress" id="quiz-progress"></div>
+    <div class="quiz-question" id="quiz-question"></div>
+    <div class="quiz-options" id="quiz-options"></div>
+    <div class="quiz-audio" id="quiz-audio" style="display:none;"></div>
+    <div class="quiz-hint" id="quiz-hint"></div>
+    <button class="quiz-next" id="quiz-next" style="display:none;">Weiter</button>
+    <div class="quiz-end" id="quiz-end" style="display:none;"></div>
+  </div>
+  <audio id="audio-hint" src="/assets/audio/2_Getting_warmer.mp3"></audio>
+  <audio id="audio-whisper" src="/assets/audio/4_Theyre_gone.mp3"></audio>
+  <audio id="quiz-bg" src="/assets/audio/pad_quiz_timetoanswer.wav" loop></audio>
+  <audio id="quiz-activated" src="/assets/audio/quiz_activatd.mp3"></audio>
+  <script>
+    // Quiz-Daten
+    const quiz = [
+      {
+        question: 'When was the last time you slept through the night?',
+        options: ['This week', 'Last year', 'Never before'],
+        correct: 2,
+        audio: '/assets/audio/memories_lie.mp3',
+        hint: 'Secret Hint',
+        multi: false,
+        wrongSound: '/assets/audio/are_you_sure.mp3'
+      },
+      {
+        question: 'What symptoms do you experience regularly?',
+        options: ['Nightmares', 'memory gaps', 'noises while sleeping'],
+        correct: [0,1,2],
+        audio: '/assets/audio/things_unremembered.mp3',
+        hint: 'Secret Hint',
+        multi: true
+      },
+      {
+        question: 'Why are you here?',
+        options: ['To sleep', 'To forget', 'To heal'],
+        correct: 1,
+        audio: '/assets/audio/sleep_access.mp3',
+        hint: 'Secret Hint',
+        multi: false,
+        wrongSound: '/assets/audio/you_wanted_to_forget.mp3'
+      }
+    ];
+    let current = 0;
+    let selected = [];
+    let finished = false;
+    const q = id => document.getElementById(id);
+
+    function renderQuestion() {
+      if (current >= quiz.length) return renderEnd();
+      const qdata = quiz[current];
+      q('quiz-progress').textContent = `Frage ${current+1} / ${quiz.length}`;
+      q('quiz-question').textContent = qdata.question;
+      q('quiz-hint').textContent = qdata.hint || '';
+      q('quiz-end').style.display = 'none';
+      // Audio
+      if (qdata.audio) {
+        q('quiz-audio').style.display = '';
+        q('quiz-audio').innerHTML = `<button id='play-audio' style='padding:8px 18px; border-radius:6px; border:none; background:#e0e7ef; color:#222; cursor:pointer;'>Play audio</button>`;
+        document.getElementById('play-audio').onclick = () => {
+          const audio = new Audio(qdata.audio);
+          audio.volume = 0.9; // Lautstärke für Hinweis-/Audioprotokoll-Sound
+          audio.play();
+        };
+      } else {
+        q('quiz-audio').style.display = 'none';
+      }
+      // Optionen
+      q('quiz-options').innerHTML = '';
+      selected = qdata.multi ? [] : null;
+      qdata.options.forEach((opt, i) => {
+        const btn = document.createElement('div');
+        btn.className = 'quiz-option';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (finished) return;
+          if (qdata.multi) {
+            if (selected.includes(i)) {
+              selected = selected.filter(x => x !== i);
+              btn.classList.remove('selected');
+            } else {
+              selected.push(i);
+              btn.classList.add('selected');
+            }
+            q('quiz-next').disabled = selected.length === 0;
+          } else {
+            selected = i;
+            Array.from(document.getElementsByClassName('quiz-option')).forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            q('quiz-next').disabled = false;
+          }
+        };
+        q('quiz-options').appendChild(btn);
+      });
+      // Weiter-Button
+      q('quiz-next').style.display = '';
+      q('quiz-next').disabled = true;
+      q('quiz-next').onclick = checkAnswer;
+    }
+
+    let secondChance = false;
+    function checkAnswer() {
+      const qdata = quiz[current];
+      let correct = false;
+      if (qdata.multi) {
+        correct = Array.isArray(selected) && selected.length === qdata.correct.length && selected.every(i => qdata.correct.includes(i));
+      } else {
+        correct = selected === qdata.correct;
+      }
+      // Feedback
+      let wrongSoundPlayed = false;
+      let rightSoundPlayed = false;
+      let wasWrong = false;
+      // Wenn zweite Chance aktiv ist, dann jetzt erst Lösung zeigen
+      if (!qdata.multi && secondChance) {
+        let wasSecondWrong = selected !== qdata.correct;
+        Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
+          if (i === qdata.correct) {
+            btn.classList.add('correct');
+            if (!rightSoundPlayed && selected === qdata.correct) {
+              const audio = new Audio('/assets/audio/electric-chimes.wav');
+              audio.volume = 0.2;
+              audio.play();
+              rightSoundPlayed = true; 
+            }
+          } else if (i === selected) {
+            btn.classList.add('incorrect');
+          }
+          btn.onclick = null;
+        });
+        if (wasSecondWrong) {
+          const audio = new Audio('/assets/audio/wrong_answer.mp3');
+          audio.volume = 0.4;
+          audio.play();
+        }
+        q('quiz-next').disabled = true;
+        secondChance = false;
+        setTimeout(() => {
+          current++;
+          selected = [];
+          renderQuestion();
+        }, 3000);
+        return;
+      }
+      Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
+        if (qdata.multi) {
+          if (qdata.correct.includes(i)) {
+            btn.classList.add('correct');
+            if (!rightSoundPlayed && Array.isArray(selected) && selected.length === qdata.correct.length && selected.every(idx => qdata.correct.includes(idx))) {
+              const audio = new Audio('/assets/audio/electric-chimes.wav'); // Optional: Hier kannst du auch einen anderen Sound nehmen
+              audio.volume = 0.2; // Lautstärke für richtigen Antwort-Sound
+              audio.play();
+              rightSoundPlayed = true;
+            }
+          } else if (selected.includes(i)) {
+            btn.classList.add('incorrect');
+          }
+        } else {
+          if (i === qdata.correct) {
+            // Noch nicht grün markieren, erst nach zweitem Versuch
+          } else if (i === selected) {
+            btn.classList.add('incorrect');
+            if (!wrongSoundPlayed && selected !== qdata.correct) {
+              const wrongSound = qdata.wrongSound || '/assets/audio/wrong_answer.mp3';
+              const audio = new Audio(wrongSound);
+              audio.volume = 0.5; // Lautstärke für falsche Antwort
+              audio.play();
+              wrongSoundPlayed = true;
+              wasWrong = true;
+            }
+          }
+        }
+        btn.onclick = null;
+      });
+      q('quiz-next').disabled = true;
+      // Zweite Chance bei falscher Antwort (nur bei Single-Choice)
+      if (!qdata.multi && wasWrong && !secondChance) {
+        secondChance = true;
+        setTimeout(() => {
+          // Optionen zurücksetzen
+          Array.from(document.getElementsByClassName('quiz-option')).forEach((btn) => {
+            btn.classList.remove('incorrect', 'selected');
+            btn.onclick = () => {
+              if (finished) return;
+              selected = Array.prototype.indexOf.call(btn.parentNode.children, btn);
+              Array.from(document.getElementsByClassName('quiz-option')).forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected');
+              q('quiz-next').disabled = false;
+            };
+          });
+          q('quiz-next').disabled = true;
+        }, 1200);
+        return;
+      }
+      // Bei richtiger Antwort oder nach zweitem Versuch Lösung zeigen
+      if (!qdata.multi && !wasWrong && !secondChance) {
+        // Richtige Antwort beim ersten Versuch
+        Array.from(document.getElementsByClassName('quiz-option')).forEach((btn, i) => {
+          if (i === qdata.correct) {
+            btn.classList.add('correct');
+            if (!rightSoundPlayed && selected === qdata.correct) {
+              const audio = new Audio('/assets/audio/electric-chimes.wav'); // Optional: Hier kannst du auch einen anderen Sound nehmen
+              audio.play();
+              rightSoundPlayed = true;
+            }
+          }
+          btn.onclick = null;
+        });
+        q('quiz-next').disabled = true;
+        setTimeout(() => {
+          current++;
+          selected = [];
+          renderQuestion();
+        }, 3000);
+        return;
+      }
+      // Multiple-Choice oder andere Fälle
+      if (qdata.multi) {
+        setTimeout(() => {
+          current++;
+          selected = [];
+          renderQuestion();
+        }, 3000);
+      }
+    }
+
+    function renderEnd() {
+      finished = true;
+      stopQuizBg(); // Hintergrundsound stoppen
+      q('quiz-question').textContent = '';
+      q('quiz-options').innerHTML = '';
+      q('quiz-hint').textContent = '';
+      q('quiz-audio').style.display = 'none';
+      q('quiz-next').style.display = 'none';
+      q('quiz-progress').textContent = '';
+      q('quiz-end').style.display = '';
+      q('quiz-end').textContent = 'Thank you! You will be redirected to the next phase.';
+      // Endscreen-Image einfügen (bleibt dauerhaft, aber Reload zeigt wieder das Quiz)
+      setTimeout(() => {
+        const endImg = document.createElement('img');
+        endImg.src = '/assets/images/endscreen.jpeg';
+        endImg.alt = 'Endscreen';
+        endImg.style.position = 'fixed';
+        endImg.style.top = '50%';
+        endImg.style.left = '50%';
+        endImg.style.transform = 'translate(-50%, -50%) scale(1)';
+        endImg.style.width = '100vw';
+        endImg.style.height = '100vh';
+        endImg.style.objectFit = 'cover';
+        endImg.style.zIndex = '9999';
+        endImg.style.transition = 'transform 2.5s cubic-bezier(0.4,0,0.2,1)';
+        document.body.appendChild(endImg);
+        setTimeout(() => {
+          endImg.style.transform = 'translate(-50%, -50%) scale(1.18)';
+        }, 100);
+        // Setze ein Flag im SessionStorage, damit Reload wieder das Spiel (Startseite) zeigt
+        sessionStorage.setItem('quizEnded', '1');
+      }, 2500);
+// Wenn Endscreen-Flag gesetzt ist, zurück zum Spiel-Start (wie bei http://localhost:5173/) bei Reload
+if (sessionStorage.getItem('quizEnded') === '1') {
+  sessionStorage.removeItem('quizEnded');
+  window.location.href = window.origin + '/';
+}
+    }
+
+    // Quiz-Hintergrundsound abspielen, sobald Seite geladen wird (mit User-Interaktion für Autoplay)
+    function playQuizBg() {
+      const bg = document.getElementById('quiz-bg');
+      if (bg) {
+        bg.volume = 0.1;
+        bg.currentTime = 0;
+        bg.play().catch(() => {});
+      }
+    }
+
+    // Versuche direkt zu starten, und als Fallback bei erstem User-Klick
+    window.addEventListener('DOMContentLoaded', () => {
+      playQuizBg();
+      document.body.addEventListener('pointerdown', playQuizBg, { once: true });
+    });
+
+    // quiz_activatd.mp3 kann weiterhin über window.startQuizBgSound() gestartet werden, aber ist nicht mehr Standard
+    function playQuizActivatedAndThenBg() {
+      const activated = document.getElementById('quiz-activated');
+      if (activated) {
+        activated.currentTime = 0;
+        activated.play().catch(() => {});
+      }
+    }
+    function stopQuizBg() {
+      const bg = document.getElementById('quiz-bg');
+      if (bg && !bg.paused) {
+        bg.pause();
+        bg.currentTime = 0;
+      }
+    }
+    // Quiz-Hintergrundsound erst nach quiz_activatd abspielen, wenn ?startbg=1 in der URL
+// Soundstart explizit über externen Aufruf (z.B. Raycast aus 3D-Engine)
+window.startQuizBgSound = playQuizActivatedAndThenBg;
+// Debug: Logge Soundstart
+console.log('window.startQuizBgSound ist bereit.');
+// Test: Soundstart bei erstem Klick auf die Seite (nur für Debug, kann wieder entfernt werden)
+// document.body.addEventListener('click', window.startQuizBgSound, { once: true });
+    renderQuestion();
+  </script>
+</body>
+</html>
+
+
