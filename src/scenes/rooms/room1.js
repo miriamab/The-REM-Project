@@ -397,7 +397,7 @@ key.traverse(child => {
  // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
     setTimeout(() => {
       playNarratorClip('eins');
-    }, 5000); // 25 Sekunden
+    }, 12000); // 25 Sekunden
 
 
 const quallenTexture = textureLoader.load('assets/images/quallen.png');
@@ -510,10 +510,10 @@ this.wandbilder = [quallenMesh, wallPaintMesh, wallTeddyMesh, wallSplashMesh];
     this.add(somnaFloorMesh);
 
    // Hintergrundmusik im Raum abspielen
-const backgroundMusic = new Audio('assets/audio/spooky_sound.mp3');
-backgroundMusic.loop = true; // Musik wiederholen
-backgroundMusic.volume = 0.5; // Lautstärke anpassen
-backgroundMusic.play(); // Musik starten
+this.backgroundMusic = new Audio('assets/audio/spooky_sound.mp3');
+this.backgroundMusic.loop = true; // Musik wiederholen
+this.backgroundMusic.volume = 0.5; // Lautstärke anpassen
+this.backgroundMusic.play(); // Musik starten
 
 
 if (!this.camera || !this.camera.position) {
@@ -539,6 +539,12 @@ if (!this.camera || !this.camera.position) {
     blackRectangle.traverse(child => {
       if (child.isMesh) {
         registerInteractive(child, () => {
+          if (this.backgroundMusic) {
+            this.backgroundMusic.pause();
+            this.backgroundMusic.currentTime = 0; // Zurücksetzen
+            this.backgroundMusic = null;
+          }
+
           playCutsceneAndSwitch('/cutscenes/room2.mp4', () => {
             this.switchToRoom2(); // Raumwechsel ausführen
           });
