@@ -397,7 +397,7 @@ key.traverse(child => {
  // --- Timer für Erzähler-Audio (unabhängig von Interaktion) ---
     setTimeout(() => {
       playNarratorClip('eins');
-    }, 5000); // 25 Sekunden
+    }, 12000); // 25 Sekunden
 
 
 const quallenTexture = textureLoader.load('assets/images/quallen.png');
