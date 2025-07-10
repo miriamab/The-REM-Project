@@ -34,6 +34,7 @@ export class Room2 extends BaseRoom {
     this.squidLight = null; // Lichteffekt für das Squid während der Verfolgung
     this.isSquidChasing = false; // Flag für aktiven Verfolgungsmodus
     this.fallSound = null; // Referenz auf den aktuellen Fallsound
+    this.jumpScareActive = false; // Flag für aktiven Jump-Scare
   }
 
   init() {
@@ -364,11 +365,8 @@ export class Room2 extends BaseRoom {
               child.visible = true;
               // Interaktion registrieren
               registerInteractive(child, () => {
-                // Sound abspielen
-                console.log("Medizinischer Rucksack wurde aufgehoben! Spiele 'one_item' Sound ab");
-                const itemSound = new Audio('/assets/audio/one_item.mp3');
-                itemSound.volume = 0.4;
-                itemSound.play().catch(e => console.log("Audio konnte nicht abgespielt werden:", e));
+                // Jump-Scare-Effekt ausführen
+                this.triggerJumpScare();
                 
                 // Objekt aus Szene entfernen
                 this.scene.remove(backpack);
@@ -1538,6 +1536,57 @@ export class Room2 extends BaseRoom {
         }, 12000); // 12 Sekunden warten
       }
     }
+  }
+
+  // Jump-Scare-Effekt: Weißer Flash, Kamera-Shake und Sound
+  triggerJumpScare() {
+    console.log('Jump-Scare ausgelöst!');
+    
+    // Verhindere mehrfachen Aufruf
+    if (this.jumpScareActive) return;
+    this.jumpScareActive = true;
+    
+    // Weißer Vollbild-Flash erstellen
+    const flashOverlay = document.createElement('div');
+    flashOverlay.style.position = 'fixed';
+    flashOverlay.style.top = '0';
+    flashOverlay.style.left = '0';
+    flashOverlay.style.width = '100vw';
+    flashOverlay.style.height = '100vh';
+    flashOverlay.style.backgroundColor = '#ffffff';
+    flashOverlay.style.zIndex = '10000';
+    flashOverlay.style.opacity = '1';
+    flashOverlay.style.pointerEvents = 'none';
+    flashOverlay.style.transition = 'none'; // Kein Übergang beim Erscheinen
+    document.body.appendChild(flashOverlay);
+    
+    // Sofortiger Kamera-Shake beim Auslösen
+    this.shakeCamera(3.0, 800); // Intensiver Shake für 800ms
+    
+    // Jump-Scare Sound abspielen
+    const jumpScareSound = new Audio('/assets/audio/jumpscare.mp3');
+    jumpScareSound.volume = 1.0; // Maximale Lautstärke für intensiven Jump-Scare
+    jumpScareSound.play().catch(() => {
+      console.warn('Jump-Scare Sound konnte nicht abgespielt werden');
+    });
+    
+    // Flash bleibt 5 Sekunden vollständig sichtbar
+    setTimeout(() => {
+      // Nach 5 Sekunden: Langsamer Fade-Out über 3 Sekunden
+      flashOverlay.style.transition = 'opacity 3s ease-out';
+      flashOverlay.style.opacity = '0';
+      
+      // Nach dem Fade-Out: Element entfernen
+      setTimeout(() => {
+        if (flashOverlay.parentNode) {
+          flashOverlay.parentNode.removeChild(flashOverlay);
+        }
+        // Jump-Scare kann wieder ausgelöst werden
+        this.jumpScareActive = false;
+        console.log('Jump-Scare beendet');
+      }, 3000); // 3 Sekunden Fade-Out-Zeit
+      
+    }, 5000); // 5 Sekunden vollständig sichtbar
   }
 
   // Bereinigt Ressourcen beim Verlassen der Szene
