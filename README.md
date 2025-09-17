@@ -6,8 +6,6 @@ You enter a fragmented world shaped by childhood echoes and the shadow of a forg
 
 > _This project was created as part of a university course. It's not a finished game – but a solid foundation for a larger, interactive experience._
 
----
-
 ## ✨ What to Expect
 
 In its current state, the game includes:
@@ -19,7 +17,6 @@ In its current state, the game includes:
 
 You’ll interact with objects, uncover strange fragments, and be guided by a cryptic, sometimes sassy narrator — all while trying to piece together who you were… and what happened.
 
----
 
 ## Story Overview
 
@@ -42,8 +39,6 @@ You’ll interact with objects, uncover strange fragments, and be guided by a cr
 > Or deeper in.  
 > Before you forget who you were.
 
----
-
 ## 🪼 The REM Substance
 
 At the core of the SOMNA experiment lies a rare, forbidden substance — a psychoactive extract derived from mysterious, deep-sea jellyfish.  
@@ -52,7 +47,6 @@ Known only to select researchers and shadowy organizations, this **turquoise glo
 
 The REM Substance is your connection to this dream logic reality — and your only clue to escaping it.
 
----
 
 ## Tools Used
 
@@ -62,6 +56,8 @@ The REM Substance is your connection to this dream logic reality — and your on
 -  **Illustrator / Photoshop / Procreate** — visual design & textures  
 -  **Eleven Labs** — AI voice generation  
 -  **VS Code & GitHub Projects** — development & project management  
+
+![Narrator](./docs/documentation/Bildschirmfoto 2025-06-12 um 14.59.24.png)
 
 ---
 
