@@ -1,5 +1,5 @@
 # The REM Project  
-![Logo Animation](./docs/design/rem-logo.mp4)
+![Logo Animation](./docs/design/logo.png)
 
 **The REM Project** is an atmospheric narrative prototype built with Three.js, exploring the blurry edges between memory, dream, and distorted perception.  
 You enter a fragmented world shaped by childhood echoes and the shadow of a forgotten sleep study called **SOMNA**.
