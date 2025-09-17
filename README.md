@@ -17,6 +17,7 @@ In its current state, the game includes:
 
 You’ll interact with objects, uncover strange fragments, and be guided by a cryptic, sometimes sassy narrator — all while trying to piece together who you were… and what happened.
 
+![Room 1](./docs/documentation/BildschirmfotoRaum1.png)
 
 ## Story Overview
 
