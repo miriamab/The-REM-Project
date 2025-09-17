@@ -39,6 +39,8 @@ You’ll interact with objects, uncover strange fragments, and be guided by a cr
 > Or deeper in.  
 > Before you forget who you were.
 
+![Narrator](./assets/images/start_video.png)
+
 ## 🪼 The REM Substance
 
 At the core of the SOMNA experiment lies a rare, forbidden substance — a psychoactive extract derived from mysterious, deep-sea jellyfish.  
@@ -57,8 +59,6 @@ The REM Substance is your connection to this dream logic reality — and your on
 -  **Eleven Labs** — AI voice generation  
 -  **VS Code & GitHub Projects** — development & project management  
 
-![Narrator](./docs/documentation/Bildschirmfoto 2025-06-12 um 14.59.24.png)
-
 ---
 
 ## Team SOMNA
@@ -76,12 +76,10 @@ The REM Substance is your connection to this dream logic reality — and your on
 ![Room 1 Preview](./docs/documentation/Screen_video_Raum1.mp4)  
 *A walkthrough of an early stage of Room 1.*
 
----
 
 ## 🧪 Design Research & Ideation  
 [🔗 FigJam Board – Concept & Planning](https://www.figma.com/board/Tt5eXHgnUpSVIPkEpgLyF2/3D-Game?node-id=0-1&t=mEG6sSPjzyisHiGq-1)
 
----
 
 ## 💤 To Be Continued…
 
@@ -90,3 +88,5 @@ The REM Substance is your connection to this dream logic reality — and your on
 >  
 > For now:  
 > **Wake up... or keep dreaming.**
+
+![Ending](./assets/images/endscreen.jpeg)
