@@ -59,7 +59,6 @@ The REM Substance is your connection to this dream logic reality — and your on
 -  **Eleven Labs** — AI voice generation  
 -  **VS Code & GitHub Projects** — development & project management  
 
----
 
 ## Team SOMNA
 
@@ -68,7 +67,6 @@ The REM Substance is your connection to this dream logic reality — and your on
 - 🧩 **Miriam** – Scrum Master, Developer  
 - 🧭 **Samira** – Developer
 
----
 
 ##  Documentation
 
